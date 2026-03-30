@@ -4,6 +4,6 @@ REMOTE="infantresearch@2MC9W54:/C:/3HYPER FREEPLAY DV METRABS/MATLAB Keypoints 2
 LOCAL="../data"
 
 echo "Syncing dataset..."
-rsync -avz $REMOTE $LOCAL
+rsync -avz $REMOTE $LOCAL -vvv
 
 echo "Done."

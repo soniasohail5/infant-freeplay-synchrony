@@ -54,6 +54,7 @@ def calculate_largest_gap_not_interpolated(keypoint_data, gap_threshold):
 def main():
     folder_path = '/mnt/c/3HYPER FREEPLAY DV METRABS/MATLAB Keypoints 2/2D Keypoints/'
     
+    # Initialize empty summary sheets for each subject
     infant_interpolation_summary = {
         "dyad_number": [],
         "num_total_gaps": [],
@@ -72,6 +73,7 @@ def main():
         "largest_gap_rejected": [],
     }
 
+    # Extract metrics from each dyad in the dataset
     for file in os.listdir(folder_path):
         full_path = os.path.join(folder_path, file)
         dyad_info = import_data(full_path)
@@ -115,10 +117,12 @@ def main():
         parent_interpolation_summary["num_gaps_rejected"].append(parent_rejected_gaps)
         parent_interpolation_summary["remaining_duration_pct"].append(parent_interpolated_duration_pct)
         parent_interpolation_summary["largest_gap_rejected"].append(parent_largest_rejected_gap)
-        
+
+    # Combine all dyads into single DataFrame  
     infant_interpolation_per_video_df = pd.DataFrame(infant_interpolation_summary)
     parent_interpolation_per_video_df = pd.DataFrame(parent_interpolation_summary)
 
+    # Write dataframes into an excel sheet 
     with pd.ExcelWriter('interpolation_model_summary.xlsx') as writer:
         infant_interpolation_per_video_df.to_excel(writer, sheet_name='Infant', index=False)
         parent_interpolation_per_video_df.to_excel(writer, sheet_name='Parent', index=False)
