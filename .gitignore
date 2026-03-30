@@ -10,4 +10,6 @@ movement_separation_test.py
 saving_joint_connections.py
 snr_calculation.py
 tf219/
-tf219/
+.venv/
+__pycache__
+

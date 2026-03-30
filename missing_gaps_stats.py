@@ -12,22 +12,25 @@ JOINT_NAMES = ["Head"]
 JOINT_INDICES = [16]
 CLUSTER_THRESHOLD_FRAMES = 30 
 
-# Generates an .xlsx file that lists several characteristics from several joint keypoints in each video in the dataset: 
-    # (1) video duration (string), 
-    # (2) number of segments (int), 
-    # (3) duration of each segment (array of ints)
+'''
+Generates an .xlsx file that lists several characteristics from several joint keypoints in each video in the dataset: 
+    (1) video duration (string), 
+    (2) number of segments (int), 
+    (3) duration of each segment (array of ints)
     
-# All characteristics will have two columns - one measured in frames (int), and one measured in minutes:seconds (string)
-# Done for each desired joint keypoint (head, l/r shoulders, l/r elbows, l/r wrists, spines 2 & 3)
+All characteristics will have two columns - one measured in frames (int), and one measured in minutes:seconds (string)
+Done for each desired joint keypoint (head, l/r shoulders, l/r elbows, l/r wrists, spines 2 & 3)
 
-# EDIT: 3/15/2026
-# An additional sheet is made for clusters for each subject (several small missing data segments are grouped together into a larger region based on the distance between them)
-# For each cluster found in a joint signal, the cluster sheet includes the following information:
-    # (1) Start frame of cluster
-    # (2) End frame of cluster
-    # (3) Number of gaps the cluster contains
-    # (4) Duration of the cluster (in frames)
-    # (5) Duration of the cluster (in minutes:seconds)
+EDIT: 3/15/2026
+An additional sheet is made for clusters for each subject (several small missing data segments are grouped together into a larger region based on the distance between them)
+For each cluster found in a joint signal, the cluster sheet includes the following information:
+    (1) Start frame of cluster
+    (2) End frame of cluster
+    (3) Number of gaps the cluster contains
+    (4) Duration of the cluster (in frames)
+    (5) Duration of the cluster (in minutes:seconds)
+
+'''
 
 def import_data(dyad_file_path):
     # Extracts required attributes from .mat files for infant and parent 
