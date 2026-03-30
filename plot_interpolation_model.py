@@ -197,47 +197,8 @@ def plot_interpolation_model(infant_df, parent_df):
 
 def main():
     # Load per-dyad interpolation summary DataFrames produced by the interpolation model script
-    # infant_df = pd.read_excel("interpolation_model_summary.xlsx", sheet_name="Infant")
-    # parent_df = pd.read_excel("interpolation_model_summary.xlsx", sheet_name="Parent")
-
-    # Demo: synthetic data
-    rng = np.random.default_rng(42)
-    n_dyads = 30
-    dyad_numbers = list(range(1, n_dyads + 1))
-    total_frames = VIDEO_DURATION_SECONDS * FPS
-
-    infant_accepted = rng.integers(5, 50, n_dyads)
-    infant_rejected = rng.integers(0, 30, n_dyads)
-    infant_rejected_frames = rng.integers(0, 500, n_dyads)
-    infant_preserved = total_frames - infant_rejected_frames
-
-    parent_accepted = rng.integers(1, 15, n_dyads)
-    parent_rejected = rng.integers(0, 5, n_dyads)
-    parent_rejected_frames = rng.integers(0, 100, n_dyads)
-    parent_preserved = total_frames - parent_rejected_frames
-
-    infant_interpolated_frames = rng.integers(0, 300, n_dyads)
-    parent_interpolated_frames = rng.integers(0, 50, n_dyads)
-
-    infant_df = pd.DataFrame({
-        "dyad_number": dyad_numbers,
-        "num_gaps_accepted": infant_accepted,
-        "num_gaps_rejected": infant_rejected,
-        "largest_gap_rejected": rng.integers(0, 120, n_dyads),
-        "preserved_duration_frames": infant_preserved,
-        "preserved_duration_pct": (infant_preserved / total_frames * 100).round(2),
-        "interpolated_frames": infant_interpolated_frames,
-    })
-
-    parent_df = pd.DataFrame({
-        "dyad_number": dyad_numbers,
-        "num_gaps_accepted": parent_accepted,
-        "num_gaps_rejected": parent_rejected,
-        "largest_gap_rejected": rng.integers(0, 60, n_dyads),
-        "preserved_duration_frames": parent_preserved,
-        "preserved_duration_pct": (parent_preserved / total_frames * 100).round(2),
-        "interpolated_frames": parent_interpolated_frames,
-    })
+    infant_df = pd.read_excel("interpolation_model_summary.xlsx", sheet_name="Infant")
+    parent_df = pd.read_excel("interpolation_model_summary.xlsx", sheet_name="Parent")
 
     plot_interpolation_model(infant_df, parent_df)
 
