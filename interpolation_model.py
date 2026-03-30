@@ -23,20 +23,8 @@ GAP_THRESHOLD_SECONDS = 0.4
 def calculate_num_interpolated_gaps(keypoint_data, gap_threshold):
     # Returns the number of gaps that would be filled by linear interpolation under the specified gap size threshold
     valid_gaps = find_interpolated_gaps_by_gap_size(keypoint_data, gap_threshold)
-    return valid_gaps
+    return len(valid_gaps)
 
-def plot_interpolated_gaps_per_video(num_gaps_per_video, total_gaps_per_video):
-    # Plots a stacked bar graph showing the number of gaps filled by interpolation vs. total gaps for each video
-
-    videos = range(len(num_gaps_per_video))
-    plt.bar(videos, num_gaps_per_video, label='Interpolated Gaps')
-    plt.bar(videos, total_gaps_per_video, bottom=num_gaps_per_video, label='Total Gaps', alpha=0.5)
-    plt.xlabel('Video Index')
-    plt.ylabel('Number of Gaps')
-    plt.title('Number of Interpolated Gaps vs Total Gaps per Video')
-    plt.legend()
-    plt.show()
-    
 def calculate_total_interpolated_duration(accepted_gaps_in_video):
     # Returns the total duration of the video preserved by interpolation under the specified gap size threshold
     total_interpolated_duration = sum([len(gap) for gap in accepted_gaps_in_video])
@@ -56,13 +44,25 @@ def calculate_largest_gap_not_interpolated(keypoint_data, gap_threshold):
     largest_gap_not_interpolated = max(len(gap) for gap in valid_gaps)
     return largest_gap_not_interpolated
 
-def plot_largest_gap_not_interpolated(largest_gaps_per_video):
-    # Plots a histogram of the largest gap not interpolated for each video in the dataset under the specified gap size threshold
-    import matplotlib.pyplot as plt
+def plot_interpolated_gaps_per_video(dyad_numbers, num_gaps_per_video, total_gaps_per_video):
+    # Plots a stacked bar graph showing the number of gaps filled by interpolation vs. total gaps for each video
+    videos = [int(num) for num in dyad_numbers]
+    
+    plt.bar(videos, num_gaps_per_video, label='Interpolated Gaps')
+    plt.bar(videos, total_gaps_per_video, bottom=num_gaps_per_video, label='Total Gaps', alpha=0.5)
+    plt.xlabel('Video Index')
+    plt.ylabel('Number of Gaps')
+    plt.title('Number of Interpolated Gaps vs Total Gaps per Video')
+    plt.legend()
+    plt.show()
 
-    plt.hist(largest_gaps_per_video, bins=20, edgecolor='black')
+def plot_largest_gap_not_interpolated(dyad_numbers, largest_gaps_per_video):
+    # Plots a horizontal bar graph of the largest gap rejected by each video
+    videos = [int(num) for num in dyad_numbers]
+    bars = plt.barh(videos, largest_gaps_per_video, align='center')
+    plt.bar_label(bars, label_type='edge', padding=5)
     plt.xlabel('Largest Gap Not Interpolated (frames)')
-    plt.ylabel('Number of Videos')
+    plt.ylabel('Dyad Number')
     plt.title('Distribution of Largest Gaps Not Interpolated per Video')
     plt.show()
 
@@ -71,7 +71,7 @@ def main():
     
     infant_interpolation_summary = {
         "dyad_number": [],
-        "total_gaps": [],
+        "num_total_gaps": [],
         "num_gaps_accepted": [],
         "num_gaps_rejected": [],
         "remaining_duration_pct": [],
@@ -80,7 +80,7 @@ def main():
     
     parent_interpolation_summary =  {
         "dyad_number": [],
-        "total_gaps": [],
+        "num_total_gaps": [],
         "num_gaps_accepted": [],
         "num_gaps_rejected": [],
         "remaining_duration_pct": [],
@@ -99,14 +99,17 @@ def main():
         infant_signal = infant_keypoint_data[0, 0, :]
         parent_signal = parent_keypoint_data[0, 0, :]
         
-        infant_total_gaps = find_gap_indices(infant_signal)
-        parent_total_gaps = find_gap_indices(parent_signal)
+        infant_total_gaps = len(find_gap_indices(infant_signal))
+        parent_total_gaps = len(find_gap_indices(parent_signal))
         
-        infant_accepted_gaps = calculate_num_interpolated_gaps(infant_signal, GAP_THRESHOLD_FRAMES)
-        parent_accepted_gaps = calculate_num_interpolated_gaps(parent_signal, GAP_THRESHOLD_FRAMES)
+        infant_accepted_gaps = find_interpolated_gaps_by_gap_size(infant_signal, GAP_THRESHOLD_FRAMES)
+        parent_accepted_gaps = find_interpolated_gaps_by_gap_size(parent_signal, GAP_THRESHOLD_FRAMES)
         
-        infant_rejected_gaps = len(infant_total_gaps) - len(infant_accepted_gaps)
-        parent_rejected_gaps = len(parent_total_gaps) - len(parent_accepted_gaps)
+        infant_accepted_gaps_num = calculate_num_interpolated_gaps(infant_signal, GAP_THRESHOLD_FRAMES)
+        parent_accepted_gaps_num = calculate_num_interpolated_gaps(parent_signal, GAP_THRESHOLD_FRAMES)
+        
+        infant_rejected_gaps = infant_total_gaps - infant_accepted_gaps_num
+        parent_rejected_gaps = parent_total_gaps - parent_accepted_gaps_num
         
         infant_interpolated_duration_pct = calculate_percentage_video_interpolated(infant_accepted_gaps, total_video_duration)
         parent_interpolated_duration_pct = calculate_percentage_video_interpolated(parent_accepted_gaps, total_video_duration)
@@ -115,21 +118,29 @@ def main():
         parent_largest_rejected_gap = calculate_largest_gap_not_interpolated(parent_signal, GAP_THRESHOLD_FRAMES)
         
         infant_interpolation_summary["dyad_number"].append(dyad_number)
-        infant_interpolation_summary["total_gaps"].append(infant_total_gaps)
-        infant_interpolation_summary["num_gaps_accepted"].append(infant_accepted_gaps)
+        infant_interpolation_summary["num_total_gaps"].append(infant_total_gaps)
+        infant_interpolation_summary["num_gaps_accepted"].append(infant_accepted_gaps_num)
         infant_interpolation_summary["num_gaps_rejected"].append(infant_rejected_gaps)
         infant_interpolation_summary["remaining_duration_pct"].append(infant_interpolated_duration_pct)
         infant_interpolation_summary["largest_gap_rejected"].append(infant_largest_rejected_gap)
         
         parent_interpolation_summary["dyad_number"].append(dyad_number)
-        parent_interpolation_summary["total_gaps"].append(parent_total_gaps)
-        parent_interpolation_summary["num_gaps_accepted"].append(parent_accepted_gaps)
+        parent_interpolation_summary["num_total_gaps"].append(parent_total_gaps)
+        parent_interpolation_summary["num_gaps_accepted"].append(parent_accepted_gaps_num)
         parent_interpolation_summary["num_gaps_rejected"].append(parent_rejected_gaps)
         parent_interpolation_summary["remaining_duration_pct"].append(parent_interpolated_duration_pct)
         parent_interpolation_summary["largest_gap_rejected"].append(parent_largest_rejected_gap)
         
     infant_interpolation_per_video_df = pd.DataFrame(infant_interpolation_summary)
     parent_interpolation_per_video_df = pd.DataFrame(parent_interpolation_summary)
+    
+    dyad_number_list = infant_interpolation_summary["dyad_number"]
+    infant_total_gaps_list = infant_interpolation_summary["num_total_gaps"]
+    infant_accepted_gaps_list = infant_interpolation_summary["num_gaps_accepted"]
+    infant_largest_gap_rejected_list = infant_interpolation_summary["largest_gap_rejected"]
+    
+    plot_interpolated_gaps_per_video(dyad_number_list, infant_total_gaps_list, infant_accepted_gaps_list) 
+    # plot_largest_gap_not_interpolated(dyad_number_list, infant_largest_gap_rejected_list)
 
 if __name__ == "__main__":    
     main()
