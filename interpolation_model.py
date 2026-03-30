@@ -121,6 +121,7 @@ def main():
     # Combine all dyads into single DataFrame  
     infant_interpolation_per_video_df = pd.DataFrame(infant_interpolation_summary)
     parent_interpolation_per_video_df = pd.DataFrame(parent_interpolation_summary)
+    # why doesnt this work 
 
     # Write dataframes into an excel sheet 
     with pd.ExcelWriter('interpolation_model_summary.xlsx') as writer:
