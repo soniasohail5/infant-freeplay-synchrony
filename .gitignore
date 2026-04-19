@@ -1,3 +1,26 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+venv/
+env/
+*.env
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE / editor folders
+.vscode/
+.idea/
+tf219/
+
+# Additional files to ignore
+allfiles.txt
 gap_duration_histogram.png
 3HYPER Joint Keypoint Missing Data Gap MasterFile 3.xlsx
 3HYPER Joint Keypoint Missing Data Gap MasterFile 5.xlsx
@@ -9,7 +32,12 @@ median_loss_curve_head.png
 movement_separation_test.py
 saving_joint_connections.py
 snr_calculation.py
-tf219/
-.venv/
-__pycache__
-
+3HYPER Joint Keypoint Label Swapping Log.csv
+~$3HYPER Joint Keypoint Missing Data Gap MasterFile 5.xlsx
+3HYPER Joint Keypoint Label Swapping Log.csv:sec.endpointdlp
+.gitignore
+3HYPER Joint Keypoint Label Swapping Log.csv:Zone.Identifier
+interpolation_model_summary.xlsx
+__pycache__/signal_plotting.cpython-312.pyc
+__pycache__/signal_plotting.cpython-312.pyc
+__pycache__/signal_postprocessing.cpython-312.pyc

@@ -54,7 +54,7 @@ def visualize_matplotlib(image, pred, joint_names, joint_edges, save_filepath):
 def visualize(image, pred, joint_names, joint_edges, save_filepath):
         visualize_matplotlib(image, pred, joint_names, joint_edges, save_filepath)
         
-folder_dir = "/mnt/myd/IN-PERSON EXPERIMENT RECORDINGS/3HYPER FREEPLAY/3HYPER DV FREEPLAY/keypoint extraction 1-26-2026"
+folder_dir = "/mnt/e/IN-PERSON EXPERIMENT RECORDINGS/3HYPER FREEPLAY/3HYPER DV FREEPLAY/keypoint extraction"
 dst_dir = "/mnt/c/3HYPER FREEPLAY DV METRABS"
 video_duration = 240
 
@@ -92,7 +92,7 @@ for file in os.listdir(folder_dir):
                 new_img_path = os.path.join(dst_dir, file_path.stem, image_name)
                 
                 print("Running inference on " + image_name)
-                pred = model.detect_poses(frame_input, default_fov_degrees=55, skeleton=skeleton)
+                pred = model.detect_poses(frame_input, default_fov_degrees=55, skeleton=skeleton, suppress_implausible_poses=True, detector_flip_aug=True, detector_nms_iou_threshold=0.4)
                 pred = tf.nest.map_structure(lambda x: x.numpy(), pred)
                 os.makedirs(os.path.dirname(new_file_path), exist_ok=True)
         

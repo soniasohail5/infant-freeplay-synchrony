@@ -593,10 +593,10 @@ def main():
     # Load data
     keypoints_path = (
         "/mnt/c/3HYPER FREEPLAY DV METRABS/MATLAB Keypoints 2/2D Keypoints/"
-        "3HYPER.095 FREEPLAY DV EXTRACTED 2D Keypoints.mat"
+        "3HYPER.108 FREEPLAY DV EXTRACTED 2D Keypoints.mat"
     )
     keypoints_mat = sio.loadmat(keypoints_path)
-    video_path = "/mnt/myd/IN-PERSON EXPERIMENT RECORDINGS/3HYPER FREEPLAY/3HYPER DV FREEPLAY/3HYPER.095 FREEPLAY (DV) CROPPED.mp4"
+    video_path = "/mnt/e/IN-PERSON EXPERIMENT RECORDINGS/3HYPER FREEPLAY/3HYPER DV FREEPLAY/3HYPER.108 FREEPLAY(DV) - CROPPED.mp4"
 
     person_0_raw = keypoints_mat['person_0_2d'].astype(float)
     person_1_raw = keypoints_mat['person_1_2d'].astype(float)

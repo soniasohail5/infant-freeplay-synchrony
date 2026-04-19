@@ -137,10 +137,10 @@ def make_ids_consistent(dyad_info):
     return dyad_info
 
 # Directory
-folder_dir = "/mnt/c/3HYPER FREEPLAY DV METRABS"
+folder_dir = "/mnt/c/3HYPER FREEPLAY DV METRABS/labelling 4132026"
 new_folder_dir = "/mnt/c/3HYPER FREEPLAY DV METRABS/Processed Data 2"
 
-for folder in sorted(os.listdir(folder_dir))[15:]:
+for folder in sorted(os.listdir(folder_dir)):
    # Initialize lists for infant and parent (2 detection labeling)
     # Initialize list of frames for 3 detection labeling (collection of dyad_info)
     person_0, person_1 = [], []
