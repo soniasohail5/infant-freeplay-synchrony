@@ -32,7 +32,7 @@ def normalize_signal(data_x, data_y):
     
     return normalized_signal
 
-def plot_original_vs_preprocessed_signals(infant_original_data, parent_original_data, infant_normalized_data, parent_normalized_data, dyad_number, joint_index):
+def plot_original_vs_preprocessed_signals(infant_original_data, parent_original_data, infant_normalized_data, parent_normalized_data, dyad_number):
     fig, ax = plt.subplots(2, 2, sharex=True)
     
     frames_x = np.arange(len(parent_original_data))
@@ -97,14 +97,14 @@ def main():
                 parent_intermediate_keypoints[new_joint, coordinate, :] = movmad_filter(parent_interpolated_signal, 30)
                 
             # Normalize signal 
-            print("Normalize signal using L2 norm .....")
+            print("Normalize signal using L2/Euclidean norm .....")
             infant_x, infant_y = infant_intermediate_keypoints[new_joint, 0, :], infant_intermediate_keypoints[new_joint, 1, :]
             parent_x, parent_y = parent_intermediate_keypoints[new_joint, 0, :], parent_intermediate_keypoints[new_joint, 1, :]
             
             infant_normalized_signal = normalize_signal(infant_x, infant_y)
             parent_normalized_signal = normalize_signal(parent_x, parent_y)
             
-            # Add nornalized keypoints to new numpy array for saving
+            # Add normalized keypoints to new numpy array for saving
             print(f"Saving modified signals to new array ......")
             infant_modified_keypoints[new_joint, :] = infant_normalized_signal
             parent_modified_keypoints[new_joint, :] = parent_normalized_signal
