@@ -14,6 +14,15 @@ dyad_mislabelling_list = '3HYPER Joint Keypoint Label Swapping Log.csv'
 dst_dir = '/mnt/c/3HYPER FREEPLAY DV METRABS/MATLAB Keypoints 2/2D Keypoints Swapped'
 selected_joint_indices = [16]
 
+def import_unknown_detection_keypoints(keypoints_path):
+    # Extracts person_2 keypoints for swapping purposes (identified as unknown in swapping log)
+    dyad_info = sio.loadmat(keypoints_path)
+    unknown_keypoints = np.array(dyad_info["person_2_2d"])
+    print(type(unknown_keypoints))
+    print(unknown_keypoints.shape[2])
+    
+    return unknown_keypoints
+
 def filter_nans_from_indices(infant_signal, parent_signal, selected_indices):
     infant_signal, _ = replace_missing(infant_signal)
     parent_signal, _ = replace_missing(parent_signal)
