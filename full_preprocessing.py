@@ -3,21 +3,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.io as sio
 from missing_gaps_stats import import_data, get_dyad_number
-from signal_postprocessing import replace_missing, lin_interp_threshold, butterworth_filter, find_missing_segments_indices, movmad_filter
+from signal_postprocessing import replace_missing, lin_interp_threshold, movmad_filter
 
 # Cleaning and interpolating signals for all dyads except excluded ones
 GAP_THRESHOLD_FRAMES = 12
 JOINT_NAMES = ["Neck", "Head", "Left Shoulder", "Right Shoulder"]
 keypoints_dir = "/mnt/c/3HYPER FREEPLAY DV METRABS/MATLAB Keypoints 2/2D Keypoints"
+dst_dir = "/mnt/c/3HYPER FREEPLAY DV METRABs/MATLAB Keypoints 2/2D Keypoints Processed"
 excluded_dyads = [57, 76, 78, 112, 40, 108, 31]
 desired_joint_indices = [12, 15, 16, 17, 18, 19]
 
 def save_keypoints_in_mat(dyad_number, processed_infant_data, processed_parent_data, destination_folder_path):
     # Prepare file path for saving
     if dyad_number >= 100:
-        file_name = "3HYPER." + str(dyad_number) + " FREEPLAY DV EXTRACTED 2D Swapped Keypoints.mat"
+        file_name = "3HYPER." + str(dyad_number) + " FREEPLAY DV PROCESSED 2D Keypoints.mat"
     else:
-        file_name = "3HYPER.0" +str(dyad_number) + " FREEPLAY DV EXTRACTED 2D Swapped Keypoints.mat"
+        file_name = "3HYPER.0" + str(dyad_number) + " FREEPLAY DV PROCESSED 2D Keypoints.mat"
             
     full_file_path = os.path.join(destination_folder_path, file_name)
         
@@ -111,10 +112,9 @@ def main():
             # Plot keypoints for verification
             plot_original_vs_preprocessed_signals(infant_keypoints[joint, coordinate, :], parent_keypoints[joint, coordinate, :], infant_modified_keypoints[new_joint, :], 
                                                   parent_modified_keypoints[new_joint, :], dyad_number)
-            
-            # Save keypoints to .mat file for analysis 
-            
-            
+        
+        # Save keypoints to .mat file for analysis 
+        save_keypoints_in_mat(dyad_number, infant_modified_keypoints, parent_modified_keypoints, dst_dir)
             
 if __name__ == "__main__":
     main()
