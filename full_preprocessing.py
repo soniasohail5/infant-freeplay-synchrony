@@ -35,16 +35,18 @@ def plot_original_vs_preprocessed_signals(infant_original_data, parent_original_
     fig, ax = plt.subplots(2, 2, sharex=True)
     
     frames_x = np.arange(len(parent_original_data))
+    infant_original_signal_normalized = normalize_signal(infant_original_data[:, 0, :], infant_original_data[:, 1, :])
+    parent_original_signal_normalized = normalize_signal(parent_original_data[:, 0, :], parent_original_data[:, 1, :])
     
     fig.suptitle(f"Original vs. Preprocessed for Dyad #{dyad_number}")
 
-    ax[0,0].plot(frames_x, infant_original_data)
+    ax[0,0].plot(frames_x, infant_original_signal_normalized)
     ax[0,0].set_title(f"Infant (Original)")
     
     ax[1,0].plot(frames_x, infant_normalized_data)
     ax[1,0].set_title(f"Infant (Preprocessed)")
     
-    ax[0,1].plot(frames_x, parent_original_data)
+    ax[0,1].plot(frames_x, parent_original_signal_normalized)
     ax[0,1].set_title(f"Parent (Original)")
     
     ax[1,1].plot(frames_x, parent_normalized_data)
