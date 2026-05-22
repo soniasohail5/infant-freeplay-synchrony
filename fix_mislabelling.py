@@ -12,16 +12,22 @@ from signal_postprocessing import lin_interp_threshold
 keypoints_folder = '/mnt/c/3HYPER FREEPLAY DV METRABS/MATLAB Keypoints 2/2D Keypoints'
 dyad_mislabelling_list = '3HYPER Joint Keypoint Label Swapping Log.csv'
 dst_dir = '/mnt/c/3HYPER FREEPLAY DV METRABS/MATLAB Keypoints 2/2D Keypoints Swapped'
-selected_joint_indices = [16]
 
-def import_unknown_detection_keypoints(keypoints_path):
+def import_unknown_detection_keypoints(list_of_unique_dyads, keypoints_path):
+    unknown_detection_keypoints_collection = {}
     # Extracts person_2 keypoints for swapping purposes (identified as unknown in swapping log)
-    dyad_info = sio.loadmat(keypoints_path)
+    for dyad in list_of_unique_dyads:
+        if dyad >= 100:
+            file_name = "3HYPER." + str(dyad) + " FREEPLAY DV EXTRACTED 2D Keypoints.mat"
+        else:
+            file_name = "3HYPER.0" + str(dyad) + " FREEPLAY DV EXTRACTED 2D Keypoints.mat"
+            
+    file_path = os.path.join(keypoints_path, file_name)
+    dyad_info = sio.loadmat(file_path)
     unknown_keypoints = np.array(dyad_info["person_2_2d"])
-    print(type(unknown_keypoints))
-    print(unknown_keypoints.shape[2])
+    unknown_detection_keypoints_collection[dyad] = unknown_keypoints
     
-    return unknown_keypoints
+    return unknown_detection_keypoints_collection
 
 def filter_nans_from_indices(infant_signal, parent_signal, selected_indices):
     infant_signal, _ = replace_missing(infant_signal)
@@ -66,8 +72,12 @@ def swap_keypoints(data_1, data_2, indices_list):
     original_data_2 = copy.deepcopy(data_2)
     swapped_data_2 = copy.deepcopy(data_2)
     
+    print(original_data_2.shape)
+    
     swapped_data_1[indices_list] = original_data_2[indices_list]
     swapped_data_2[indices_list] = original_data_1[indices_list]
+    
+    print("Swap performed.")
         
     return swapped_data_1, swapped_data_2
 
@@ -110,7 +120,7 @@ def plot_interval(original_data, swapped_data, joint, coordinate, start=0, end=7
     t = np.arange(start, end)
 
     plt.figure(figsize=(12, 5))
-    plt.plot(t, original_signal, label="Original", alpha=0.7)
+    # plt.plot(t, original_signal, label="Original", alpha=0.7)
     plt.plot(t, swapped_signal + 10, label="Swapped", alpha=0.7)
 
     plt.title(f"{title} | Joint {joint}, Coord {coordinate} | Frames {start}-{end}")
@@ -125,27 +135,41 @@ def main():
     
     selected_dyads = [40]
     selected_dyad_keypoints = import_select_participants(selected_dyads, keypoints_folder)
+    unknown_detection_keypoints = import_unknown_detection_keypoints(selected_dyads, keypoints_folder)
     swap_log = pd.read_csv(dyad_mislabelling_list)
     
-    for dyad in selected_dyad_keypoints:
+    for (dyad, unknown_detection) in zip(selected_dyad_keypoints, unknown_detection_keypoints):
         original_infant_selected_dyad_keypoints = copy.deepcopy(selected_dyad_keypoints[dyad]["infant"])
         original_parent_selected_dyad_keypoints = copy.deepcopy(selected_dyad_keypoints[dyad]["parent"])
+        unknown_detection_selected_dyad_keypoints = copy.deepcopy(unknown_detection_keypoints[unknown_detection])
         
         print(f"Swapping keypoints for Dyad #{dyad}")
         all_swap_indices = find_all_swap_indices(swap_log, dyad)
-        print(f"Swapping at Indices: {all_swap_indices}")
+        swap_type_list = get_swap_type_list(swap_log, dyad)
         
-        for joint in selected_joint_indices:
+        for joint in range(24):
             for coordinate in range(2):
                 # Get original keypoint data
                 infant_signal, _ = replace_missing(lin_interp_threshold(selected_dyad_keypoints[dyad]["infant"][joint, coordinate, :], 12))
                 parent_signal, _ = replace_missing(lin_interp_threshold(selected_dyad_keypoints[dyad]["parent"][joint, coordinate, :], 12))
+                unknown_signal, _ = replace_missing(unknown_detection_keypoints[unknown_detection][joint, coordinate, :])
                 
                 # Swap keypoints at necessary indices
-                
-                swapped_infant_signal, swapped_parent_signal = swap_keypoints(infant_signal, parent_signal, all_swap_indices)
-                swapped_infant_signal, _ = replace_missing(swapped_infant_signal)
-                swapped_parent_signal, _ = replace_missing(swapped_parent_signal)
+                for (indices_list, swap_type) in zip(all_swap_indices, swap_type_list):
+                    if swap_type == 'Infant-Parent' or swap_type == 'Parent-Infant':
+                        swapped_infant_signal, swapped_parent_signal = swap_keypoints(infant_signal, parent_signal, indices_list)
+                        swapped_infant_signal, _ = replace_missing(swapped_infant_signal)
+                        swapped_parent_signal, _ = replace_missing(swapped_parent_signal)
+                        
+                    elif swap_type == 'Infant-Unknown':
+                        swapped_infant_signal, swapped_unknown_signal = swap_keypoints(infant_signal, unknown_signal, indices_list)
+                    
+                    elif swap_type == 'Parent-Unknown':
+                        swapped_parent_signal, swapped_unknown_signal = swap_keypoints(parent_signal, unknown_signal, indices_list)
+                        
+                    else:
+                        raise ValueError('Not a valid swap type. Check spelling and type in swapping log.')
+                    
                 print("Swapping complete.")
                 
                 start=0
@@ -159,11 +183,11 @@ def main():
                 selected_dyad_keypoints[dyad]["infant"][joint, coordinate, :] = swapped_infant_signal
                 selected_dyad_keypoints[dyad]["parent"][joint, coordinate, :] = swapped_parent_signal
                 
-                plot_interval(infant_signal, swapped_infant_signal, joint, coordinate, start, stop)
+                # plot_interval(infant_signal, swapped_infant_signal, joint, coordinate, start, stop)
                 
         # Save keypoints to new .mat file
-        # print(f"Saving swapped keypoints for Dyad #{dyad}")
-        # save_keypoints_in_mat(dyad, selected_dyad_keypoints[dyad]["infant"], selected_dyad_keypoints[dyad]["parent"], dst_dir)
+        print(f"Saving swapped keypoints for Dyad #{dyad}")
+        save_keypoints_in_mat(dyad, selected_dyad_keypoints[dyad]["infant"], selected_dyad_keypoints[dyad]["parent"], dst_dir)
         
 if __name__ == "__main__":
     main()
