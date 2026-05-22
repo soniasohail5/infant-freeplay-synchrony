@@ -32,15 +32,16 @@ def normalize_signal(data_x, data_y):
     
     return normalized_signal
 
-def plot_original_vs_preprocessed_signals(infant_original_data, parent_original_data, infant_normalized_data, parent_normalized_data, dyad_number):
+def plot_original_vs_preprocessed_signals(infant_original_data, parent_original_data, infant_normalized_data, parent_normalized_data, dyad_number, joint, coordinate):
     fig, ax = plt.subplots(2, 2, sharex=True)
+    coordinates = ['X', 'Y']
     
     frames_x = np.arange(len(parent_original_data))
     
     fig.suptitle(f"Original vs. Preprocessed for Dyad #{dyad_number}")
 
     ax[0,0].plot(frames_x, infant_original_data)
-    ax[0,0].set_title(f"Infant (Original)")
+    ax[0,0].set_title(f"Infant (Original), Joint Index: {joint}, {coordinates[coordinate]}-direction")
     
     ax[1,0].plot(frames_x, infant_normalized_data)
     ax[1,0].set_title(f"Infant (Preprocessed)")
@@ -96,6 +97,10 @@ def main():
                 infant_intermediate_keypoints[new_joint, coordinate, :] = movmad_filter(infant_interpolated_signal, 30)
                 parent_intermediate_keypoints[new_joint, coordinate, :] = movmad_filter(parent_interpolated_signal, 30)
                 
+                # Plot keypoints for verification
+                plot_original_vs_preprocessed_signals(infant_original_signal, parent_original_signal, infant_intermediate_keypoints[new_joint, coordinate, :], 
+                parent_intermediate_keypoints[new_joint, coordinate, :], dyad_number, joint, coordinate)
+                
             # Normalize signal 
             print("Normalize signal using L2/Euclidean norm .....")
             infant_x, infant_y = infant_intermediate_keypoints[new_joint, 0, :], infant_intermediate_keypoints[new_joint, 1, :]
@@ -108,11 +113,7 @@ def main():
             print(f"Saving modified signals to new array ......")
             infant_modified_keypoints[new_joint, :] = infant_normalized_signal
             parent_modified_keypoints[new_joint, :] = parent_normalized_signal
-            
-            # Plot keypoints for verification
-            plot_original_vs_preprocessed_signals(infant_keypoints[joint, coordinate, :], parent_keypoints[joint, coordinate, :], infant_modified_keypoints[new_joint, :], 
-                                                  parent_modified_keypoints[new_joint, :], dyad_number)
-        
+
         # Save keypoints to .mat file for analysis 
         save_keypoints_in_mat(dyad_number, infant_modified_keypoints, parent_modified_keypoints, dst_dir)
             
