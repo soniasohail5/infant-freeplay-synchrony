@@ -7,15 +7,14 @@ from signal_postprocessing import replace_missing, lin_interp_threshold, movmad_
 
 # Cleaning and interpolating signals for all dyads except excluded ones
 GAP_THRESHOLD_FRAMES = 12
-JOINT_NAMES = ["Neck", "Head", "Left Shoulder", "Right Shoulder"]
 keypoints_dir = "/mnt/c/3HYPER FREEPLAY DV METRABS/MATLAB Keypoints 2/2D Keypoints"
 dst_dir = "/mnt/c/3HYPER FREEPLAY DV METRABs/MATLAB Keypoints 2/2D Keypoints Processed"
-excluded_dyads = [57, 76, 78, 112, 40, 108, 31]
+excluded_dyads = [57, 76, 78, 112, 40, 108]
 desired_joint_indices = [12, 15, 16, 17, 18, 19]
 
 def save_keypoints_in_mat(dyad_number, processed_infant_data, processed_parent_data, destination_folder_path):
     # Prepare file path for saving
-    if dyad_number >= 100:
+    if int(dyad_number) >= 100:
         file_name = "3HYPER." + str(dyad_number) + " FREEPLAY DV PROCESSED 2D Keypoints.mat"
     else:
         file_name = "3HYPER.0" + str(dyad_number) + " FREEPLAY DV PROCESSED 2D Keypoints.mat"
@@ -75,10 +74,10 @@ def main():
         infant_intermediate_keypoints = np.ones_like(infant_keypoints)
         parent_intermediate_keypoints = np.ones_like(parent_keypoints)
         
-        infant_modified_keypoints = np.zeros((len(desired_joint_indices), infant_max_frames))
-        parent_modified_keypoints = np.zeros((len(desired_joint_indices), parent_max_frames))
+        infant_modified_keypoints = np.zeros(24, infant_max_frames)
+        parent_modified_keypoints = np.zeros(24, parent_max_frames)
         
-        for (joint, new_joint) in (zip(desired_joint_indices, range(len(desired_joint_indices)))):
+        for joint in range(24):
             for coordinate in range(2):
                 infant_original_signal = infant_keypoints[joint, coordinate, :]
                 parent_original_signal = parent_keypoints[joint, coordinate, :]
@@ -94,25 +93,21 @@ def main():
                 
                 # Median filtering 
                 print("Filtering keypoints with median filtering .....")
-                infant_intermediate_keypoints[new_joint, coordinate, :] = movmad_filter(infant_interpolated_signal, 30)
-                parent_intermediate_keypoints[new_joint, coordinate, :] = movmad_filter(parent_interpolated_signal, 30)
-                
-                # Plot keypoints for verification
-                plot_original_vs_preprocessed_signals(infant_original_signal, parent_original_signal, infant_intermediate_keypoints[new_joint, coordinate, :], 
-                parent_intermediate_keypoints[new_joint, coordinate, :], dyad_number, joint, coordinate)
+                infant_intermediate_keypoints[joint, coordinate, :] = movmad_filter(infant_interpolated_signal, 30)
+                parent_intermediate_keypoints[joint, coordinate, :] = movmad_filter(parent_interpolated_signal, 30)
                 
             # Normalize signal 
             print("Normalize signal using L2/Euclidean norm .....")
-            infant_x, infant_y = infant_intermediate_keypoints[new_joint, 0, :], infant_intermediate_keypoints[new_joint, 1, :]
-            parent_x, parent_y = parent_intermediate_keypoints[new_joint, 0, :], parent_intermediate_keypoints[new_joint, 1, :]
+            infant_x, infant_y = infant_intermediate_keypoints[joint, 0, :], infant_intermediate_keypoints[joint, 1, :]
+            parent_x, parent_y = parent_intermediate_keypoints[joint, 0, :], parent_intermediate_keypoints[joint, 1, :]
             
             infant_normalized_signal = normalize_signal(infant_x, infant_y)
             parent_normalized_signal = normalize_signal(parent_x, parent_y)
             
             # Add normalized keypoints to new numpy array for saving
             print(f"Saving modified signals to new array ......")
-            infant_modified_keypoints[new_joint, :] = infant_normalized_signal
-            parent_modified_keypoints[new_joint, :] = parent_normalized_signal
+            infant_modified_keypoints[joint, :] = infant_normalized_signal
+            parent_modified_keypoints[joint, :] = parent_normalized_signal
 
         # Save keypoints to .mat file for analysis 
         save_keypoints_in_mat(dyad_number, infant_modified_keypoints, parent_modified_keypoints, dst_dir)

@@ -60,17 +60,16 @@ def import_select_participants(list_of_unique_dyads, folder_path):
         
     return dyad_info_collection
 
-def swap_keypoints(infant_data, parent_data, list_of_indices):
-    original_infant = copy.deepcopy(infant_data)
-    swapped_infant = copy.deepcopy(infant_data)
-    original_parent = copy.deepcopy(parent_data)
-    swapped_parent = copy.deepcopy(parent_data)
+def swap_keypoints(data_1, data_2, indices_list):
+    original_data_1 = copy.deepcopy(data_1)
+    swapped_data_1 = copy.deepcopy(data_1)
+    original_data_2 = copy.deepcopy(data_2)
+    swapped_data_2 = copy.deepcopy(data_2)
     
-    list_of_indices = list(chain.from_iterable(list_of_indices))
-    swapped_infant[list_of_indices] = original_parent[list_of_indices]
-    swapped_parent[list_of_indices] = original_infant[list_of_indices]
+    swapped_data_1[indices_list] = original_data_2[indices_list]
+    swapped_data_2[indices_list] = original_data_1[indices_list]
         
-    return swapped_infant, swapped_parent
+    return swapped_data_1, swapped_data_2
 
 def find_all_swap_indices(swap_log_df, dyad_number):
     dyad_swap_log_df = swap_log_df[swap_log_df['Dyad Number'] == dyad_number]
@@ -83,6 +82,12 @@ def find_all_swap_indices(swap_log_df, dyad_number):
         list_swap_indices.append(frames)
         
     return list_swap_indices
+
+def get_swap_type_list(swap_log_df, dyad_number):
+    dyad_swap_log_df = swap_log_df[swap_log_df['Dyad Number'] == dyad_number]
+    swap_type_list = dyad_swap_log_df['Swap Type']
+    
+    return list(swap_type_list)
 
 def save_keypoints_in_mat(dyad_number, swapped_infant_data, swapped_parent_data, destination_folder_path):
     # Prepare file path for saving
@@ -137,6 +142,7 @@ def main():
                 parent_signal, _ = replace_missing(lin_interp_threshold(selected_dyad_keypoints[dyad]["parent"][joint, coordinate, :], 12))
                 
                 # Swap keypoints at necessary indices
+                
                 swapped_infant_signal, swapped_parent_signal = swap_keypoints(infant_signal, parent_signal, all_swap_indices)
                 swapped_infant_signal, _ = replace_missing(swapped_infant_signal)
                 swapped_parent_signal, _ = replace_missing(swapped_parent_signal)
@@ -153,7 +159,7 @@ def main():
                 selected_dyad_keypoints[dyad]["infant"][joint, coordinate, :] = swapped_infant_signal
                 selected_dyad_keypoints[dyad]["parent"][joint, coordinate, :] = swapped_parent_signal
                 
-                # plot_interval(infant_signal, swapped_infant_signal, joint, coordinate, start, stop)
+                plot_interval(infant_signal, swapped_infant_signal, joint, coordinate, start, stop)
                 
         # Save keypoints to new .mat file
         # print(f"Saving swapped keypoints for Dyad #{dyad}")
