@@ -10,7 +10,6 @@ GAP_THRESHOLD_FRAMES = 12
 keypoints_dir = "/mnt/c/3HYPER FREEPLAY DV METRABS/MATLAB Keypoints 2/2D Keypoints Swapped"
 dst_dir = "/mnt/c/3HYPER FREEPLAY DV METRABs/MATLAB Keypoints 2/2D Keypoints Processed"
 excluded_dyads = [57, 76, 78, 112, 108]
-desired_joint_indices = [12, 15, 16, 17, 18, 19]
 
 def save_keypoints_in_mat(dyad_number, processed_infant_data, processed_parent_data, destination_folder_path):
     # Prepare file path for saving
