@@ -1,5 +1,6 @@
 import os 
 import copy
+import math
 import pandas as pd
 import numpy as np
 import pycwt as wavelet
@@ -21,6 +22,8 @@ minimize the number of computations done
 and concatencate the coherence and CWT values before plotting
 '''
 
+DESIRED_JOINT_NAMES = ["Neck", "Head", "Left Shoulder", "Right Shoulder", "Left Elbow", "Right Elbow"]
+
 def load_data_mat(keypoints_path):
 # Loads the keypoints from the processed .mat files
 # Output is a dictionary with the infant and parent keypoints with the 
@@ -35,6 +38,7 @@ def load_data_mat(keypoints_path):
     parent_keypoints_timeseries = np.array(dyad_info_mat["Parent"])
     
     dyad_info["Dyad Number"] = dyad_number
+    dyad_info["Joints"] = DESIRED_JOINT_NAMES
     dyad_info["Infant"] = infant_keypoints_timeseries
     dyad_info["Parent"] = parent_keypoints_timeseries
     
@@ -43,15 +47,25 @@ def load_data_mat(keypoints_path):
 def convert_data_to_df(collection_of_keypoints):
 # Takes the dictionary of loaded dyad keypoints and converts them into a DataFrame 
 # Output is a pandas DataFrame
+
 def extract_dyad_df(dyad_number, data_df):
 # Pulls the infant and parent keypoints for a specific dyad from the dataframe
-def compute_wtc(dyad_number, dyad_df, s0, ):
+
+def compute_wtc(dyad_number, dyad_df, s0, dt, dj=0.25, alpha, significance_level=0.95):
 # Calculates the continuous wavelet transform (CWT) for the infant and parent joint timeseries
 # Uses CWT from infant and parent to calculate coherence (formula can be found in the Fujiwara paper)
+
+    n = dyad_df.shape[1]
+    j = math.log(2, (n* (dt/s0)))/dj
+    
+    
+
+
 def compute_cross_wt(dyad_number, dyad_df):
 # Calculates the cross wavelet transform (XWT) between the infant and parent time series signals 
 # based on their individual CWTs
 # Establishes the raw covariance/power between the time series joint signals
+
 def plot_wtc(dyad_number, dyad_df):
 # One figure has 3 subplots:
 # (1) Original time series signals of infant and parent joint 
