@@ -41,40 +41,38 @@ def load_data_mat(keypoints_path):
     infant_info = {}
     parent_info = {}
     
-    infant_info["Dyad Number"] = dyad_number
-    infant_info["Label"] = "Infant"
-    parent_info["Dyad Number"] = dyad_number
-    parent_info["Label"] = "Parent"
+    dyad_info["Dyad Number"] = dyad_number
     
-    for (joint, signal) in zip(DESIRED_JOINT_NAMES, infant_keypoints_timeseries):
-        dyad_info[joint]
-    
+    for (joint, index) in zip(DESIRED_JOINT_NAMES, range(6)):
+        infant_info[joint] = infant_keypoints_timeseries[index, :]
+        parent_info[joint] = parent_keypoints_timeseries[index, :]
+        
+    dyad_info["Infant"] = infant_info
+    dyad_info["Parent"] = parent_info
     
     return dyad_info
 
-def compute_wtc(dyad_number, dyad_df, joint_name, s0, dt, dj=0.25, significance_level=0.95):
+def compute_wtc(dyad_info, joint_name, s0, dt, dj=1/12, significance_level=0.95):
 # Calculates the continuous wavelet transform (CWT) for the infant and parent joint timeseries
 # Uses CWT from infant and parent to calculate coherence (formula can be found in the Fujiwara paper)
-
-    n = int(dyad_df.shape[1])
-    j = math.log(2, (n* (dt/s0)))/dj
-    infant_signal = dyad_df[dyad_df["Subject Type"] == "Infant"]
-    parent_signal = dyad_df[dyad_df["Subject Type"] == "Parent"]
     
-    wct, a_wct, coi, freq, sig = wavelet.wct([infant_signal[joint_name], parent_signal[joint_name]], dj, s0, j, wavelet='morlet', significance_level=significance_level)
+    infant_signal = dyad_info["Infant"][joint_name]
+    parent_signal = dyad_info["Parent"][joint_name]
+    
+    wct, a_wct, coi, freq, sig = wavelet.wct([infant_signal, parent_signal], dt, dj, s0, 
+                                             wavelet='morlet', significance_level=significance_level)
     return wct, a_wct, coi, freq, sig
     
-def compute_cross_wt(dyad_number, dyad_df, joint_name, s0, dt, dj, significance_level=0.95):
+def compute_cross_wt(dyad_info, joint_name, s0, dt, dj, significance_level=0.95):
 # Calculates the cross wavelet transform (XWT) between the infant and parent time series signals 
 # based on their individual CWTs
 # Establishes the raw covariance/power between the time series joint signals
 
-    n = int(dyad_df.shape[1])
-    j = math.log(2, (n* (dt/s0)))/dj
-    infant_signal = dyad_df[dyad_df["Subject Type"] == "Infant"]
-    parent_signal = dyad_df[dyad_df["Subject Type"] == "Parent"]
+    infant_signal = dyad_info["Infant"][joint_name]
+    parent_signal = dyad_info["Parent"][joint_name]
     
-    xwt, x, coi, freqs, sig = wavelet.xwt([infant_signal[joint_name], parent_signal[joint_name]], dt, dj, s0, j, significance_level=significance_level)
+    xwt, x, coi, freqs, sig = wavelet.xwt([infant_signal, parent_signal], dt, dj, s0, 
+                                          wavelet='morlet', significance_level=significance_level)
     return xwt, x, coi, freqs, sig
 
 # def plot_wtc(dyad_number, dyad_df, joint_name, dt, dj, s0):
@@ -85,8 +83,13 @@ def compute_cross_wt(dyad_number, dyad_df, joint_name, s0, dt, dj, significance_
 
 def main():
     
+    dt = 1/30
+    s0 = 2 * dt
     dyad_info = load_data_mat(keypoints_dir)
-    print(dyad_info)
+    # print(type(dyad_info["Infant"]["Head"]))
+    
+    xwt, x, coi, freqs, sig = compute_cross_wt(dyad_info, "Head", s0, dt, 1/12)
+    wct, a_wct, coi, freq, sig = compute_wtc(dyad_info, "Head", s0, dt, 1/12)
     
 if __name__ == "__main__":
     main()
