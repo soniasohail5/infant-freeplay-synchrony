@@ -7,7 +7,7 @@ from signal_postprocessing import replace_missing, lin_interp_threshold, movmad_
 
 # Cleaning and interpolating signals for all dyads except excluded ones
 GAP_THRESHOLD_FRAMES = 12
-keypoints_dir = "/mnt/c/3HYPER FREEPLAY DV METRABS/MATLAB Keypoints 2/2D Keypoints Swapped"
+keypoints_dir = "/mnt/c/3HYPER FREEPLAY DV METRABS/MATLAB Keypoints 2/2D Keypoints"
 dst_dir = "/mnt/c/3HYPER FREEPLAY DV METRABs/MATLAB Keypoints 2/2D Keypoints Processed"
 excluded_dyads = [57, 76, 78, 112, 108]
 
@@ -54,7 +54,7 @@ def plot_original_vs_preprocessed_signals(infant_original_data, parent_original_
 
 def main():
 
-    for file in os.listdir(keypoints_dir)[:1]:
+    for file in os.listdir(keypoints_dir)[5:6]:
         keypoint_path = os.path.join(keypoints_dir, file)
         dyad_number = get_dyad_number(file)
         
@@ -113,7 +113,7 @@ def main():
             parent_modified_keypoints[joint, :] = parent_normalized_signal
 
         # Save keypoints to .mat file for analysis 
-        save_keypoints_in_mat(dyad_number, infant_modified_keypoints, parent_modified_keypoints, dst_dir)
+        # save_keypoints_in_mat(dyad_number, infant_modified_keypoints, parent_modified_keypoints, dst_dir)
             
 if __name__ == "__main__":
     main()
