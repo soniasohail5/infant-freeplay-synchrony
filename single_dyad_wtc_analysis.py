@@ -41,18 +41,16 @@ def load_data_mat(keypoints_path):
     infant_info = {}
     parent_info = {}
     
-    dyad_info["Dyad Number"] = dyad_number
-    dyad_info["LabeL"] = "Infant"
+    infant_info["Dyad Number"] = dyad_number
+    infant_info["Label"] = "Infant"
+    parent_info["Dyad Number"] = dyad_number
+    parent_info["Label"] = "Parent"
+    
     for (joint, signal) in zip(DESIRED_JOINT_NAMES, infant_keypoints_timeseries):
         dyad_info[joint]
-    dyad_info["Parent"] = parent_keypoints_timeseries
+    
     
     return dyad_info
-
-# def convert_data_to_df(keypoints_dict):
-# Takes the dictionary of loaded dyad keypoints and converts them into a DataFrame 
-# Output is a pandas DataFrame
-
 
 def compute_wtc(dyad_number, dyad_df, joint_name, s0, dt, dj=0.25, significance_level=0.95):
 # Calculates the continuous wavelet transform (CWT) for the infant and parent joint timeseries
