@@ -22,6 +22,7 @@ minimize the number of computations done
 and concatencate the coherence and CWT values before plotting
 '''
 
+keypoints_dir = "/mnt/c/3HYPER FREEPLAY DV METRABs/MATLAB Keypoints 2/2D Keypoints Processed/3HYPER.025 FREEPLAY DV PROCESSED 2D Keypoints.mat"
 DESIRED_JOINT_NAMES = ["Neck", "Head", "Left Shoulder", "Right Shoulder", "Left Elbow", "Right Elbow"]
 
 def load_data_mat(keypoints_path):
@@ -37,40 +38,65 @@ def load_data_mat(keypoints_path):
     infant_keypoints_timeseries = np.array(dyad_info_mat["Infant"])
     parent_keypoints_timeseries = np.array(dyad_info_mat["Parent"])
     
+    infant_info = {}
+    parent_info = {}
+    
     dyad_info["Dyad Number"] = dyad_number
-    dyad_info["Joints"] = DESIRED_JOINT_NAMES
-    dyad_info["Infant"] = infant_keypoints_timeseries
+    dyad_info["LabeL"] = "Infant"
+    for (joint, signal) in zip(DESIRED_JOINT_NAMES, infant_keypoints_timeseries):
+        dyad_info[joint]
     dyad_info["Parent"] = parent_keypoints_timeseries
     
     return dyad_info
 
-def convert_data_to_df(collection_of_keypoints):
+# def convert_data_to_df(keypoints_dict):
 # Takes the dictionary of loaded dyad keypoints and converts them into a DataFrame 
 # Output is a pandas DataFrame
 
-def extract_dyad_df(dyad_number, data_df):
-# Pulls the infant and parent keypoints for a specific dyad from the dataframe
 
-def compute_wtc(dyad_number, dyad_df, s0, dt, dj=0.25, alpha, significance_level=0.95):
+def compute_wtc(dyad_number, dyad_df, joint_name, s0, dt, dj=0.25, significance_level=0.95):
 # Calculates the continuous wavelet transform (CWT) for the infant and parent joint timeseries
 # Uses CWT from infant and parent to calculate coherence (formula can be found in the Fujiwara paper)
 
-    n = dyad_df.shape[1]
+    n = int(dyad_df.shape[1])
     j = math.log(2, (n* (dt/s0)))/dj
+    infant_signal = dyad_df[dyad_df["Subject Type"] == "Infant"]
+    parent_signal = dyad_df[dyad_df["Subject Type"] == "Parent"]
     
+    wct, a_wct, coi, freq, sig = wavelet.wct([infant_signal[joint_name], parent_signal[joint_name]], dj, s0, j, wavelet='morlet', significance_level=significance_level)
+    return wct, a_wct, coi, freq, sig
     
-
-
-def compute_cross_wt(dyad_number, dyad_df):
+def compute_cross_wt(dyad_number, dyad_df, joint_name, s0, dt, dj, significance_level=0.95):
 # Calculates the cross wavelet transform (XWT) between the infant and parent time series signals 
 # based on their individual CWTs
 # Establishes the raw covariance/power between the time series joint signals
 
-def plot_wtc(dyad_number, dyad_df):
+    n = int(dyad_df.shape[1])
+    j = math.log(2, (n* (dt/s0)))/dj
+    infant_signal = dyad_df[dyad_df["Subject Type"] == "Infant"]
+    parent_signal = dyad_df[dyad_df["Subject Type"] == "Parent"]
+    
+    xwt, x, coi, freqs, sig = wavelet.xwt([infant_signal[joint_name], parent_signal[joint_name]], dt, dj, s0, j, significance_level=significance_level)
+    return xwt, x, coi, freqs, sig
+
+# def plot_wtc(dyad_number, dyad_df, joint_name, dt, dj, s0):
 # One figure has 3 subplots:
 # (1) Original time series signals of infant and parent joint 
 # (2) Results from cross wavelet transform (raw covariance)
 # (3) Results from coherence (normalization of cross wavelet transform)
+
+def main():
+    
+    dyad_info = load_data_mat(keypoints_dir)
+    print(dyad_info)
+    
+if __name__ == "__main__":
+    main()
+    
+    
+    
+
+
 
 
 
