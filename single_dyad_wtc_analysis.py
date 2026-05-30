@@ -18,7 +18,8 @@ minimize the number of computations done
 - one approach to solve this would be to break up the signal into its non-NaN segments, run CWT on each non-NaN segment
 and concatencate the coherence and CWT values before plotting
 '''
-mother = wavelet.Morlet(8)
+
+mother = wavelet.Morlet(8) # taken from Fujiwara paper
 keypoints_dir = "/mnt/c/3HYPER FREEPLAY DV METRABs/MATLAB Keypoints 2/2D Keypoints Processed/3HYPER.025 FREEPLAY DV PROCESSED 2D Keypoints.mat"
 DESIRED_JOINT_NAMES = ["Neck", "Head", "Left Shoulder", "Right Shoulder", "Left Elbow", "Right Elbow"]
 
@@ -68,7 +69,7 @@ def compute_wtc(dyad_info, joint_name, s0, dt, dj=1/12, significance_level=0.95)
     parent_signal = preprocess_signal(dyad_info["Parent"][joint_name])
     
     wct, a_wct, coi, freq, sig = wavelet.wct(infant_signal, parent_signal, dt, dj, s0, 
-                                wavelet='morlet', significance_level=significance_level, mc_count=1)
+                                wavelet='morlet', significance_level=significance_level, mc_count=50)
     return wct, a_wct, coi, freq, sig
     
 def compute_cross_wt(dyad_info, joint_name, s0, dt, dj=1/12, significance_level=0.95):
@@ -143,11 +144,13 @@ def plot_wtc_xwt(dyad_number, dyad_info, joint_name, dt, s0):
     
     im2 = ax[2].pcolormesh(timestamps, wct_period, wct, 
                            cmap='jet', vmin=0, vmax=1)
-    wct_sig_plot = sig[:, np.newaxis] * np.ones_like(wct)
+    
+    sig_clean = np.nan_to_num(sig, nan=0.0)
+    wct_sig_plot = sig_clean[:, np.newaxis] * np.ones_like(wct)
     ax[2].contour(timestamps, wct_period, wct_sig_plot, levels=[1.0], 
                   colors='black', linewidths=1.5)
-    t_skip = 40
-    p_skip = 2
+    t_skip = 100
+    p_skip = 5
 
     # Create 2D grid for arrow quiver
     t_grid, p_grid = np.meshgrid(timestamps[::t_skip], wct_period[::p_skip])
@@ -155,26 +158,28 @@ def plot_wtc_xwt(dyad_number, dyad_info, joint_name, dt, s0):
     ax[2].quiver(t_grid, p_grid, np.cos(a_wct[::p_skip, ::t_skip]),
              np.sin(a_wct[::p_skip, ::t_skip]), units='width', pivot='mid', headwidth=3)
     
-    ax[2].fill_between(timestamps, wct_coi, wct_period.max(), alpha=0.3, 
+    ax[2].fill_between(timestamps, wct_coi, wct_period.max(), alpha=0.5, 
                        color='gray', hatch='x', label='COI')
     fig.colorbar(im2, ax=ax[2], label='Coherence', extend='both')
     
-    # plt.show()
-    # plt.tight_layout(pad=3.0)
+    plt.show()
+    plt.tight_layout(pad=3.0)
     
 def main():
-
+    
+    # Initialize necessary info for wavelet analysis 
     dyad_info = load_data_mat(keypoints_dir)
     dyad_number = dyad_info["Dyad Number"]
+    joint_name = "Right Elbow"
     
-    infant_signal = dyad_info["Infant"]["Head"]
-    parent_signal = dyad_info["Parent"]["Head"]
+    infant_signal = dyad_info["Infant"][joint_name]
+    parent_signal = dyad_info["Parent"][joint_name]
     
     max_frames = max(len(infant_signal), len(parent_signal))
-    dt = max_frames/240 # assuming all videos are exactly 4 minutes long (not always true, but can be resolved in batch analyses later)
+    dt = 1/(max_frames/240) # assuming all videos are exactly 4 minutes long (not always true, but can be resolved in batch analyses later)
     s0 = 2 * dt
     
-    plot_wtc_xwt(dyad_number, dyad_info, "Head", dt, s0)
+    plot_wtc_xwt(dyad_number, dyad_info, joint_name, dt, s0)
 
 if __name__ == "__main__":
     main()
