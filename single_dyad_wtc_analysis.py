@@ -68,7 +68,7 @@ def compute_wtc(dyad_info, joint_name, s0, dt, dj=1/12, significance_level=0.95)
     parent_signal = preprocess_signal(dyad_info["Parent"][joint_name])
     
     wct, a_wct, coi, freq, sig = wavelet.wct(infant_signal, parent_signal, dt, dj, s0, 
-                                             wavelet='morlet', significance_level=significance_level)
+                                wavelet='morlet', significance_level=significance_level, mc_count=1)
     return wct, a_wct, coi, freq, sig
     
 def compute_cross_wt(dyad_info, joint_name, s0, dt, dj=1/12, significance_level=0.95):
@@ -80,7 +80,7 @@ def compute_cross_wt(dyad_info, joint_name, s0, dt, dj=1/12, significance_level=
     parent_signal = preprocess_signal(dyad_info["Parent"][joint_name])
     
     xwt, coi, freqs, sig = wavelet.xwt(infant_signal, parent_signal, dt, dj, s0, 
-                                          wavelet='morlet', significance_level=significance_level)
+                            wavelet='morlet', significance_level=significance_level)
     return xwt, coi, freqs, sig
 
 def plot_wtc_xwt(dyad_number, dyad_info, joint_name, dt, s0):
@@ -100,6 +100,8 @@ def plot_wtc_xwt(dyad_number, dyad_info, joint_name, dt, s0):
     # Initialize time/frequency scales
     max_frames = max(len(infant_signal), len(parent_signal))
     timestamps = np.arange(max_frames - 1) * dt
+    original_timestamps = np.arange(max_frames) * dt
+    
     wct_period = 1/freq
     xwt_period = 1/xfreqs
     
@@ -111,8 +113,8 @@ def plot_wtc_xwt(dyad_number, dyad_info, joint_name, dt, s0):
     ax[0].set_title("Original Signal")
     ax[0].set_xlabel("Time (s)")
     ax[0].set_ylabel("Position (px)")
-    ax[0].plot(timestamps, infant_signal, color='blue', label='Infant')
-    ax[0].plot(timestamps, parent_signal, color='red', label='Parent')
+    ax[0].plot(original_timestamps, infant_signal, color='blue', label='Infant')
+    ax[0].plot(original_timestamps, parent_signal, color='red', label='Parent')
     ax[0].legend(loc='upper right')
     
     # Subplot 2: Cross Wavelet Transform
@@ -127,10 +129,38 @@ def plot_wtc_xwt(dyad_number, dyad_info, joint_name, dt, s0):
                     cmap='jet', norm=matplotlib.colors.LogNorm())
     ax[1].fill_between(timestamps, xwt_coi, xwt_period.max(), alpha=0.3, 
                        color='gray', hatch='x', label='COI')
-    ax[1].contour(timestamps, xwt_period, sig_xwt, levels=[1.0], colors='black', linewidths=1.5)
+    xwt_sig_plot = sig_xwt[:, np.newaxis] * np.ones_like(xwt)
+    ax[1].contour(timestamps, xwt_period, xwt_sig_plot, levels=[1.0], colors='black', linewidths=1.5)
     fig.colorbar(im, ax=ax[1], label='Cross Wavelet Power')
     
-    # Subplot 2: Wavelet Coherence
+    # Subplot 3: Wavelet Coherence
+    ax[2].set_title("Cross Wavelet Coherence")
+    ax[2].set_xlabel("Time (s)")
+    ax[2].set_ylabel("Period (s)")
+    ax[2].set_yscale('log', base=2)
+    ax[2].set_ylim([wct_period.min(), wct_period.max()])
+    ax[2].invert_yaxis()
+    
+    im2 = ax[2].pcolormesh(timestamps, wct_period, wct, 
+                           cmap='jet', vmin=0, vmax=1)
+    wct_sig_plot = sig[:, np.newaxis] * np.ones_like(wct)
+    ax[2].contour(timestamps, wct_period, wct_sig_plot, levels=[1.0], 
+                  colors='black', linewidths=1.5)
+    t_skip = 40
+    p_skip = 2
+
+    # Create 2D grid for arrow quiver
+    t_grid, p_grid = np.meshgrid(timestamps[::t_skip], wct_period[::p_skip])
+
+    ax[2].quiver(t_grid, p_grid, np.cos(a_wct[::p_skip, ::t_skip]),
+             np.sin(a_wct[::p_skip, ::t_skip]), units='width', pivot='mid', headwidth=3)
+    
+    ax[2].fill_between(timestamps, wct_coi, wct_period.max(), alpha=0.3, 
+                       color='gray', hatch='x', label='COI')
+    fig.colorbar(im2, ax=ax[2], label='Coherence', extend='both')
+    
+    # plt.show()
+    # plt.tight_layout(pad=3.0)
     
 def main():
 
