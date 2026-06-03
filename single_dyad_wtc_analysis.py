@@ -1,4 +1,5 @@
 import os
+import glob
 import numpy as np
 import pycwt as wavelet
 import matplotlib
@@ -23,6 +24,12 @@ mother = wavelet.Morlet(8) # taken from Fujiwara paper
 keypoints_dir = "/mnt/c/3HYPER FREEPLAY DV METRABs/MATLAB Keypoints 2/2D Keypoints Processed/3HYPER.025 FREEPLAY DV PROCESSED 2D Keypoints.mat"
 DESIRED_JOINT_NAMES = ["Neck", "Head", "Left Shoulder", "Right Shoulder", "Left Elbow", "Right Elbow"]
 
+def clear_pycwt_cache(directory="/home/infantresearch/tf219/tf219/lib/python3.12/site-packages/pycwt/sample"):
+    cache_files = glob.glob(os.path.join(directory, "*.npy"))
+    for f in cache_files:
+        os.remove(f)
+        print(f"Removed cache file: {f}")
+        
 def load_data_mat(keypoints_path):
 # Loads the keypoints from the processed .mat files
 # Output is a dictionary with the infant and parent keypoints with the 
@@ -57,7 +64,7 @@ def preprocess_signal(signal):
     signal = np.diff(signal)
     signal = detrend(signal, type='linear')
     signal = signal - np.mean(signal)
-    signal = signal/np.std(signal, ddof=1)
+    # signal = signal/np.std(signal, ddof=1)
     
     return signal
         
@@ -69,7 +76,7 @@ def compute_wtc(dyad_info, joint_name, s0, dt, dj=1/12, significance_level=0.95)
     parent_signal = preprocess_signal(dyad_info["Parent"][joint_name])
     
     wct, a_wct, coi, freq, sig = wavelet.wct(infant_signal, parent_signal, dt, dj, s0, 
-                                wavelet='morlet', significance_level=significance_level, mc_count=50)
+                                wavelet='morlet', significance_level=significance_level, mc_count=1, cache=False)
     return wct, a_wct, coi, freq, sig
     
 def compute_cross_wt(dyad_info, joint_name, s0, dt, dj=1/12, significance_level=0.95):
@@ -93,18 +100,22 @@ def plot_wtc_xwt(dyad_number, dyad_info, joint_name, dt, s0):
     # Get original signals 
     infant_signal = dyad_info["Infant"][joint_name]
     parent_signal = dyad_info["Parent"][joint_name]
+    
+    min_signal = min(infant_signal.min(), parent_signal.min())
+    max_signal = max(infant_signal.max(), parent_signal.max())
 
-    # Compute WCT and XWT before setting up figure w/ plots
-    wct, a_wct, wct_coi, freq, sig = compute_wtc(dyad_info, joint_name, s0, dt)
-    xwt, xwt_coi, xfreqs, sig_xwt = compute_cross_wt(dyad_info, joint_name, s0, dt)
+    # Compute WCT and XWT before setting up figure w/ plots (clear cache to avoid using previous results)
+    clear_pycwt_cache()
+    wct, a_wct, wct_coi, wct_freq, sig = compute_wtc(dyad_info, joint_name, s0, dt)
+    xwt, xwt_coi, xwt_freq, sig_xwt = compute_cross_wt(dyad_info, joint_name, s0, dt)
     
     # Initialize time/frequency scales
     max_frames = max(len(infant_signal), len(parent_signal))
     timestamps = np.arange(max_frames - 1) * dt
     original_timestamps = np.arange(max_frames) * dt
     
-    wct_period = 1/freq
-    xwt_period = 1/xfreqs
+    wct_period = 1/wct_freq
+    xwt_period = 1/xwt_freq
     
     # Set up figure and respective subplots
     fig, ax = plt.subplots(3, 1, figsize=(10, 12))
@@ -114,6 +125,7 @@ def plot_wtc_xwt(dyad_number, dyad_info, joint_name, dt, s0):
     ax[0].set_title("Original Signal")
     ax[0].set_xlabel("Time (s)")
     ax[0].set_ylabel("Position (px)")
+    ax[0].set_ylim([min_signal - 100, max_signal + 100])
     ax[0].plot(original_timestamps, infant_signal, color='blue', label='Infant')
     ax[0].plot(original_timestamps, parent_signal, color='red', label='Parent')
     ax[0].legend(loc='upper right')
@@ -122,13 +134,13 @@ def plot_wtc_xwt(dyad_number, dyad_info, joint_name, dt, s0):
     ax[1].set_title("Cross Wavelet Transform")
     ax[1].set_xlabel("Time (s)")
     ax[1].set_ylabel("Period (s)")
-    ax[1].set_ylim([xwt_period.min(), xwt_period.max()])
-    ax[1].invert_yaxis()
     ax[1].set_yscale('log', base=2)
+    ax[1].set_ylim([xwt_period.min(), xwt_period.max() + 100])
+    ax[1].invert_yaxis()
     
     im = ax[1].pcolormesh(timestamps, xwt_period, np.abs(xwt), 
                     cmap='jet', norm=matplotlib.colors.LogNorm())
-    ax[1].fill_between(timestamps, xwt_coi, xwt_period.max(), alpha=0.3, 
+    ax[1].fill_between(timestamps, xwt_coi, xwt_period.max(), alpha=0.5, 
                        color='gray', hatch='x', label='COI')
     xwt_sig_plot = sig_xwt[:, np.newaxis] * np.ones_like(xwt)
     ax[1].contour(timestamps, xwt_period, xwt_sig_plot, levels=[1.0], colors='black', linewidths=1.5)
@@ -144,33 +156,40 @@ def plot_wtc_xwt(dyad_number, dyad_info, joint_name, dt, s0):
     
     im2 = ax[2].pcolormesh(timestamps, wct_period, wct, 
                            cmap='jet', vmin=0, vmax=1)
-    
     sig_clean = np.nan_to_num(sig, nan=0.0)
     wct_sig_plot = sig_clean[:, np.newaxis] * np.ones_like(wct)
-    ax[2].contour(timestamps, wct_period, wct_sig_plot, levels=[1.0], 
+    
+    ax[2].contour(timestamps, wct_period, wct/wct_sig_plot, levels=[1.0], 
                   colors='black', linewidths=1.5)
-    t_skip = 100
-    p_skip = 5
 
-    # Create 2D grid for arrow quiver
+    # Create 2D grid for arrow quiver to show lead-lag relationships
+    wct_sig_mask = wct > sig_clean[:, np.newaxis]
+    
+    t_skip = 80
+    p_skip = 7
+    
     t_grid, p_grid = np.meshgrid(timestamps[::t_skip], wct_period[::p_skip])
-
-    ax[2].quiver(t_grid, p_grid, np.cos(a_wct[::p_skip, ::t_skip]),
-             np.sin(a_wct[::p_skip, ::t_skip]), units='width', pivot='mid', headwidth=3)
+    u = np.cos(a_wct[::p_skip, :: t_skip])
+    v = np.sin(a_wct[::p_skip, ::t_skip])
+    mask = wct_sig_mask[::p_skip, ::t_skip]
+    
+    ax[2].quiver(t_grid[mask], p_grid[mask], u[mask], v[mask], 
+                 units='width', pivot='mid', headwidth=3)
     
     ax[2].fill_between(timestamps, wct_coi, wct_period.max(), alpha=0.5, 
                        color='gray', hatch='x', label='COI')
     fig.colorbar(im2, ax=ax[2], label='Coherence', extend='both')
     
-    plt.show()
     plt.tight_layout(pad=3.0)
+    plt.show()
+    
     
 def main():
     
     # Initialize necessary info for wavelet analysis 
     dyad_info = load_data_mat(keypoints_dir)
     dyad_number = dyad_info["Dyad Number"]
-    joint_name = "Right Elbow"
+    joint_name = "Head"
     
     infant_signal = dyad_info["Infant"][joint_name]
     parent_signal = dyad_info["Parent"][joint_name]
