@@ -64,7 +64,7 @@ def preprocess_signal(signal):
     signal = np.diff(signal)
     signal = detrend(signal, type='linear')
     signal = signal - np.mean(signal)
-    # signal = signal/np.std(signal, ddof=1)
+    signal = signal/np.std(signal, ddof=1)
     
     return signal
         
@@ -76,7 +76,7 @@ def compute_wtc(dyad_info, joint_name, s0, dt, dj=1/12, significance_level=0.95)
     parent_signal = preprocess_signal(dyad_info["Parent"][joint_name])
     
     wct, a_wct, coi, freq, sig = wavelet.wct(infant_signal, parent_signal, dt, dj, s0, 
-                                wavelet='morlet', significance_level=significance_level, mc_count=1, cache=False)
+                                wavelet='morlet', significance_level=significance_level, mc_count=100, cache=False)
     return wct, a_wct, coi, freq, sig
     
 def compute_cross_wt(dyad_info, joint_name, s0, dt, dj=1/12, significance_level=0.95):
@@ -133,33 +133,38 @@ def plot_wtc_xwt(dyad_number, dyad_info, joint_name, dt, s0):
     # Subplot 2: Cross Wavelet Transform
     ax[1].set_title("Cross Wavelet Transform")
     ax[1].set_xlabel("Time (s)")
-    ax[1].set_ylabel("Period (s)")
+    ax[1].set_ylabel("Frequency (Hz)")
     ax[1].set_yscale('log', base=2)
-    ax[1].set_ylim([xwt_period.min(), xwt_period.max() + 100])
-    ax[1].invert_yaxis()
+    ax[1].set_yticks([0.03, 0.06, 0.12, 0.25, 0.5, 1, 2, 4, 8])
+    ax[1].get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
+    ax[1].set_ylim([xwt_freq.min(), xwt_freq.max()])
+    # ax[1].invert_yaxis()
     
-    im = ax[1].pcolormesh(timestamps, xwt_period, np.abs(xwt), 
+    im = ax[1].pcolormesh(timestamps, xwt_freq, np.abs(xwt), 
                     cmap='jet', norm=matplotlib.colors.LogNorm())
-    ax[1].fill_between(timestamps, xwt_coi, xwt_period.max(), alpha=0.5, 
+    ax[1].fill_between(timestamps, 1/wct_coi, xwt_freq.min(), alpha=0.5, 
                        color='gray', hatch='x', label='COI')
     xwt_sig_plot = sig_xwt[:, np.newaxis] * np.ones_like(xwt)
-    ax[1].contour(timestamps, xwt_period, xwt_sig_plot, levels=[1.0], colors='black', linewidths=1.5)
+    ax[1].contour(timestamps, xwt_freq, xwt_sig_plot, levels=[1.0], colors='black', linewidths=1.5)
     fig.colorbar(im, ax=ax[1], label='Cross Wavelet Power')
     
     # Subplot 3: Wavelet Coherence
     ax[2].set_title("Cross Wavelet Coherence")
     ax[2].set_xlabel("Time (s)")
-    ax[2].set_ylabel("Period (s)")
+    ax[2].set_ylabel("Frequency (Hz)")
     ax[2].set_yscale('log', base=2)
-    ax[2].set_ylim([wct_period.min(), wct_period.max()])
-    ax[2].invert_yaxis()
+    ax[2].set_yticks([0.03, 0.06, 0.12, 0.25, 0.5, 1, 2, 4, 8])
+    ax[2].get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
+    ax[2].set_ylim([wct_freq.min(), wct_freq.max()])
+    # ax[2].invert_yaxis()
     
-    im2 = ax[2].pcolormesh(timestamps, wct_period, wct, 
+    im2 = ax[2].pcolormesh(timestamps, wct_freq, wct, 
                            cmap='jet', vmin=0, vmax=1)
     sig_clean = np.nan_to_num(sig, nan=0.0)
     wct_sig_plot = sig_clean[:, np.newaxis] * np.ones_like(wct)
-    
-    ax[2].contour(timestamps, wct_period, wct/wct_sig_plot, levels=[1.0], 
+    ax[2].fill_between(timestamps, 1/wct_coi, wct_freq.min(), alpha=0.5, 
+                color='gray', hatch='x', label='COI')
+    ax[2].contour(timestamps, wct_freq, wct/wct_sig_plot, levels=[1.0], 
                   colors='black', linewidths=1.5)
 
     # Create 2D grid for arrow quiver to show lead-lag relationships
@@ -168,21 +173,18 @@ def plot_wtc_xwt(dyad_number, dyad_info, joint_name, dt, s0):
     t_skip = 80
     p_skip = 7
     
-    t_grid, p_grid = np.meshgrid(timestamps[::t_skip], wct_period[::p_skip])
+    t_grid, p_grid = np.meshgrid(timestamps[::t_skip], wct_freq[::p_skip])
     u = np.cos(a_wct[::p_skip, :: t_skip])
     v = np.sin(a_wct[::p_skip, ::t_skip])
     mask = wct_sig_mask[::p_skip, ::t_skip]
     
     ax[2].quiver(t_grid[mask], p_grid[mask], u[mask], v[mask], 
-                 units='width', pivot='mid', headwidth=3)
+                 units='width', pivot='mid', headwidth=3, width=0.002, scale=50)
     
-    ax[2].fill_between(timestamps, wct_coi, wct_period.max(), alpha=0.5, 
-                       color='gray', hatch='x', label='COI')
     fig.colorbar(im2, ax=ax[2], label='Coherence', extend='both')
     
     plt.tight_layout(pad=3.0)
     plt.show()
-    
     
 def main():
     
