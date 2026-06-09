@@ -10,7 +10,7 @@ from matplotlib.widgets import Slider, Button
 import cv2
 import scipy.io as sio
 from scipy import signal
-from signal_postprocessing import linear_interp, spline_interp
+from signal_postprocessing import linear_interp, spline_interp, movmad_filter
 
 plt.rcParams['animation.ffmpeg_path'] = '/mnt/c/ffmpeg/bin/ffmpeg.exe'
 
@@ -105,11 +105,34 @@ def apply_butterworth_to_all_keypoints(raw_data, cutoff, order=4, fs=30):
     for joint in range(raw_data.shape[0]):
         for coord in range(2):
             sig = raw_data[joint, coord, :]
-            # med_sig = signal.medfilt(sig, kernel_size=window_size)
             if not np.all(np.isnan(sig)):
                 sig_filled = np.nan_to_num(sig, nan=np.nanmean(sig))
                 filtered_data[joint, coord, :] = signal.filtfilt(b, a, sig_filled)
 
+    return filtered_data
+
+def apply_medfilt_to_all_keypoints(raw_data, window_size):
+    """
+    Apply Butterworth low-pass filter to ALL keypoints uniformly.
+
+    Args:
+        raw_data: (n_joints, 2, n_frames) array
+        cutoff: Cutoff frequency in Hz
+        order: Filter order (default 4)
+        fs: Sampling frequency
+
+    Returns:
+        filtered_data: Same shape as raw_data
+    """
+    filtered_data = raw_data.copy()
+
+    for joint in range(raw_data.shape[0]):
+        for coord in range(2):
+            sig = raw_data[joint, coord, :]
+            if not np.all(np.isnan(sig)):
+                sig_filled = np.nan_to_num(sig, nan=0)
+                filtered_data[joint, coord, :] = movmad_filter(sig_filled, window_size)
+                
     return filtered_data
 
 def apply_linear_interp(raw_data):
@@ -609,14 +632,17 @@ def main():
     print("=" * 70)
 
     # Filtering parameters
+    fs = 30
+    
+    '''
     cutoff_freq  = float(input("\nEnter Butterworth cutoff frequency (Hz, default 6): ") or "6")
     filter_order = int(input("Enter filter order (default 4): ") or "4")
-    fs = 30
 
     print(f"\nApplying {filter_order}th-order Butterworth filter at {cutoff_freq} Hz...")
     print("  Filtering Person 0 (Infant)...")
+    '''
     # 1: Linear Interpolation only 
-    person_0_interpolated = apply_linear_interp(person_0_raw)
+    person_0_interpolated = apply_medfilt_to_all_keypoints(apply_linear_interp(person_0_raw), 30)
     
     # 2: Linear Interpolation + Butterworth Filter
     # person_0_filtered = apply_butterworth_to_all_keypoints(person_0_interpolated, cutoff_freq, order=filter_order, fs=fs)
@@ -629,7 +655,7 @@ def main():
 
     print("  Filtering Person 1 (Parent)...")
     # 1: Linear Interpolation only 
-    person_1_interpolated = apply_linear_interp(person_1_raw)
+    person_1_interpolated = apply_medfilt_to_all_keypoints(apply_linear_interp(person_1_raw), 30)
 
     # 2: Linear Interpolation + Butterworth Filter
     # person_1_filtered = apply_butterworth_to_all_keypoints(person_1_interpolated, cutoff_freq, order=filter_order, fs=fs)
@@ -660,17 +686,16 @@ def main():
 
     # Ask whether to save or view interactively
     save_input = input("\nSave animation to file? (y/n, default n): ").strip().lower()
+    print("\nSave options:")
+    print("  1 – Both panels (raw + filtered)")
+    print("  2 – Raw only")
+    print("  3 – Filtered only")
+    save_choice = input("Choose (default 1): ").strip() or "1"
 
-    if save_input == 'y':
-        print("\nSave options:")
-        print("  1 – Both panels (raw + filtered)")
-        print("  2 – Raw only")
-        print("  3 – Filtered only")
-        save_choice = input("Choose (default 1): ").strip() or "1"
+    out_base = input("Output filename base (default 'skeleton_animation'): ").strip() \
+                or "skeleton_animation"
 
-        out_base = input("Output filename base (default 'skeleton_animation'): ").strip() \
-                   or "skeleton_animation"
-
+    if save_input == "1":
         if save_choice == "1":
             viz.save_animation(f"{out_base}.mp4", show_video=show_video)
         elif save_choice == "2":
@@ -679,6 +704,7 @@ def main():
             viz.save_filtered_animation(f"{out_base}_filtered.mp4", show_video=show_video)
         else:
             print("Invalid choice, skipping save.")
+            
     else:
         print("\nLaunching interactive player...")
         viz.interactive_player(show_video=show_video, playback_speed=speed)

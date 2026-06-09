@@ -76,7 +76,7 @@ def compute_wtc(dyad_info, joint_name, s0, dt, dj=1/12, significance_level=0.95)
     parent_signal = preprocess_signal(dyad_info["Parent"][joint_name])
     
     wct, a_wct, coi, freq, sig = wavelet.wct(infant_signal, parent_signal, dt, dj, s0, 
-                                wavelet='morlet', significance_level=significance_level, mc_count=100, cache=False)
+                                wavelet='morlet', significance_level=significance_level, mc_count=1)
     return wct, a_wct, coi, freq, sig
     
 def compute_cross_wt(dyad_info, joint_name, s0, dt, dj=1/12, significance_level=0.95):
@@ -119,7 +119,7 @@ def plot_wtc_xwt(dyad_number, dyad_info, joint_name, dt, s0):
     
     # Set up figure and respective subplots
     fig, ax = plt.subplots(3, 1, figsize=(10, 12))
-    fig.suptitle(f"Wavelet Analysis of Dyad #{dyad_number}")
+    fig.suptitle(f"Wavelet Analysis of {joint_name} from Dyad #{dyad_number}")
     
     # Subplot 1: Original position signals in image space
     ax[0].set_title("Original Signal")
@@ -184,6 +184,11 @@ def plot_wtc_xwt(dyad_number, dyad_info, joint_name, dt, s0):
     fig.colorbar(im2, ax=ax[2], label='Coherence', extend='both')
     
     plt.tight_layout(pad=3.0)
+    
+    # Save figure to folder in same directory
+    fig_name = "dyad_25_wtc_" + joint_name + ".png"
+    # plt.savefig(fig_name)
+    
     plt.show()
     
 def main():
@@ -191,16 +196,17 @@ def main():
     # Initialize necessary info for wavelet analysis 
     dyad_info = load_data_mat(keypoints_dir)
     dyad_number = dyad_info["Dyad Number"]
-    joint_name = "Head"
     
-    infant_signal = dyad_info["Infant"][joint_name]
-    parent_signal = dyad_info["Parent"][joint_name]
-    
-    max_frames = max(len(infant_signal), len(parent_signal))
-    dt = 1/(max_frames/240) # assuming all videos are exactly 4 minutes long (not always true, but can be resolved in batch analyses later)
-    s0 = 2 * dt
-    
-    plot_wtc_xwt(dyad_number, dyad_info, joint_name, dt, s0)
+    for joint_name in DESIRED_JOINT_NAMES:
+        infant_signal = dyad_info["Infant"]["Right Elbow"]
+        parent_signal = dyad_info["Parent"]["Left Elbow"]
+                
+        max_frames = max(len(infant_signal), len(parent_signal))
+        dt = 1/(max_frames/240) # assuming all videos are exactly 4 minutes long (not always true, but can be resolved in batch analyses later)
+        s0 = 2 * dt
+
+        print(f"Computing WTC for {joint_name}....")
+        plot_wtc_xwt(dyad_number, dyad_info, joint_name, dt, s0)
 
 if __name__ == "__main__":
     main()
