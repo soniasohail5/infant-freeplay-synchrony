@@ -22,7 +22,7 @@ and concatencate the coherence and CWT values before plotting
 
 mother = wavelet.Morlet(8) # taken from Fujiwara paper
 keypoints_dir = "/mnt/c/3HYPER FREEPLAY DV METRABs/MATLAB Keypoints 2/2D Keypoints Processed/3HYPER.025 FREEPLAY DV PROCESSED 2D Keypoints.mat"
-DESIRED_JOINT_NAMES = ["Neck", "Head", "Left Shoulder", "Right Shoulder", "Left Elbow", "Right Elbow"]
+DESIRED_JOINT_NAMES = ["Neck", "Head", "Right Clavicle", "Left Clavicle", "Left Shoulder", "Right Shoulder", "Left Elbow", "Right Elbow"]
 
 def clear_pycwt_cache(directory="/home/infantresearch/tf219/tf219/lib/python3.12/site-packages/pycwt/sample"):
     cache_files = glob.glob(os.path.join(directory, "*.npy"))
