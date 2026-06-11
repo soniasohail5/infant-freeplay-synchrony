@@ -7,7 +7,7 @@ import matplotlib.animation as animation
 from matplotlib.widgets import CheckButtons, Slider, Button
 from signal_postprocessing import lin_interp_threshold
 from missing_gaps_stats import get_video_name, get_dyad_number
-from single_dyad_wtc_analysis import load_data_mat, compute_wtc,DESIRED_JOINT_NAMES
+from single_dyad_wtc_analysis import load_data_mat, compute_wtc, DESIRED_JOINT_NAMES
 from signal_visualization_multi import apply_medfilt_to_all_keypoints, VideoLoader
 
 '''
@@ -35,13 +35,14 @@ class MultiDataSyncFigure:
         # figure/plot params
         self.fig, self.ax = plt.subplots(num_rows, num_cols, figsize=(12, 10), sharex=True)
         self.suptitle = titles["Figure Title"]
-        self.x_label = x_label
-        self.y_label = y_label
+        self.sb_titles = titles["Subplot Titles"]
+        self.x_labels = x_label
+        self.y_labels = y_label
         
         self.x_lim = max(len(self.dyad_info["Infant"]["Head"]), len(self.dyad_info["Parent"]["Head"]))
         self.y_lim = max(self.dyad_info["Infant"]["Head"].max(), self.dyad_info["Parent"]["Head"].max())
         self.timestamps = np.arange(self.frames)/self.fps
-        
+    
     def get_wtc(self, joint_name:str):
         dt = 1/self.fps 
         s0 = 2 * dt
@@ -50,12 +51,65 @@ class MultiDataSyncFigure:
         wtc, a_wct, coi, freq, sig  = compute_wtc(self.dyad_info, selected_joint, s0, dt)
         self.wtc_data = {"WTC": wtc, "Phase Angles": a_wct, "COI": coi, 
                          "Frequency": freq, "Significance": sig}
+    
+    def set_axes(self, playback_speed=1.0):
+        # places the titles, axes, and buttons for each plot 
+        self.fig.suptitle(self.suptitle)
         
-    def place_video_bg(self):
+        if len(self.x_label) != len(self.y_label):
+            print("Mismatch between number of x and y labels.")
+            return
         
-    def initial_plot(self):
-    def update_figure(self, playback_speed:int):
+        if len(self.ax) != len(self.sb_titles):
+            print("Mismatch between number of axes and subplot titles.")
+            return
+        
+        # fig and axes 
+        for (a, i, subtitle) in zip(self.ax, range(len(self.x_labels)), self.sb_titles):
+            self.ax[a].set_title(self.sb_titles[subtitle])
+            self.ax[a].set_xlabel(self.x_labels[i])
+            self.ax[a].set_ylabel(self.y_labels[i])
+            self.ax[a].set_xlim(self.xlim)
+            self.ax[a].set_ylim(self.ylim)
+            
+        # slider
+        ax_slider = plt.axes([0.15, 0.08, 0.7, 0.02])
+        slider = Slider(ax_slider, 'Frame', valmin=0, valmax=max(1, self.n_frames - 1),
+                        valinit=0, valstep=1)
+            
+        # time display
+        time_text = self.fig.text(0.5, 0.03, f'Time: 0.00s | Speed: {playback_speed}x',
+                             ha='center', fontsize=12)
+        # buttons 
+        ax_play       = plt.axes([0.15, 0.01, 0.08, 0.03])
+        ax_pause      = plt.axes([0.24, 0.01, 0.08, 0.03])
+        ax_reset      = plt.axes([0.33, 0.01, 0.08, 0.03])
+        ax_step_back  = plt.axes([0.50, 0.01, 0.08, 0.03])
+        ax_step_fwd   = plt.axes([0.59, 0.01, 0.08, 0.03])
+        ax_speed_down = plt.axes([0.68, 0.01, 0.08, 0.03])
+        ax_speed_up   = plt.axes([0.77, 0.01, 0.08, 0.03])
+
+        btn_play       = Button(ax_play,'Play')
+        btn_pause      = Button(ax_pause,'Pause')
+        btn_reset      = Button(ax_reset,'Reset')
+        btn_step_back  = Button(ax_step_back, '< Step')
+        btn_step_fwd   = Button(ax_step_fwd, 'Step >')
+        btn_speed_down = Button(ax_speed_down, 'Speed -')
+        btn_speed_up   = Button(ax_speed_up, 'Speed +')
+        
+        current_speed = playback_speed
+        
+        
+        
+    def draw_video_bg(self, frame_number:int):
+        # plots frame overlay in the background
+    def plot_joint(self, joint_name:str):
+        # plots joint keypoints
+    def update_figure(self, playback_speed=1.0:int):
+        # for video quality 
     def clear_figure(self):
+        # free up memory after video is finished playing or is interrupted
+        
     
         
         
