@@ -43,15 +43,18 @@ class MultiDataSyncFigure:
         self.y_lim = max(self.dyad_info["Infant"]["Head"].max(), self.dyad_info["Parent"]["Head"].max())
         self.timestamps = np.arange(self.frames)/self.fps
     
-    def get_wtc(self, joint_name:str):
+    def get_wtc(self):
         dt = 1/self.fps 
         s0 = 2 * dt
+        self.all_wtc_data = {}
         
-        selected_joint = joint_name if joint_name is in DESIRED_JOINT_NAMES else "Head"
-        wtc, a_wct, coi, freq, sig  = compute_wtc(self.dyad_info, selected_joint, s0, dt)
-        self.wtc_data = {"WTC": wtc, "Phase Angles": a_wct, "COI": coi, 
+        # calculate wtc for all joints beforehand to avoid pauses in videoplay with another joint is selected
+        for joint_name in DESIRED_JOINT_NAMES:
+            wtc, a_wct, coi, freq, sig  = compute_wtc(self.dyad_info, joint_name, s0, dt)
+            wtc_data = {"WTC": wtc, "Phase Angles": a_wct, "COI": coi, 
                          "Frequency": freq, "Significance": sig}
-    
+            self.all_wtc_data[joint_name] = wtc_data
+            
     def set_axes(self, playback_speed=1.0):
         # places the titles, axes, and buttons for each plot 
         self.fig.suptitle(self.suptitle)
@@ -99,13 +102,13 @@ class MultiDataSyncFigure:
         
         current_speed = playback_speed
         
-        
-        
+    def initialize_video(self, joint_name:str, frame_number=0:int):
+        # plots first frame with joints
     def draw_video_bg(self, frame_number:int):
         # plots frame overlay in the background
     def plot_joint(self, joint_name:str):
         # plots joint keypoints
-    def update_figure(self, playback_speed=1.0:int):
+    def update_figure(self, val:int, playback_speed=1.0:int,):
         # for video quality 
     def clear_figure(self):
         # free up memory after video is finished playing or is interrupted
