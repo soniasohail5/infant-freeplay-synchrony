@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib.widgets import CheckButtons, Slider, Button
 from signal_postprocessing import lin_interp_threshold
-from missing_gaps_stats import get_video_name, get_dyad_number
+from missing_gaps_stats import get_video_name, get_dyad_number, import_data
 from single_dyad_wtc_analysis import load_data_mat, compute_wtc, DESIRED_JOINT_NAMES
 from signal_visualization_multi import apply_medfilt_to_all_keypoints, VideoLoader
 
@@ -15,10 +15,12 @@ Side-by-side visualization of WTC heatmap and skeletal overlays on raw video dat
 get a better understanding of how low and high coherence regions map to physical interactions 
 between infant and parent subjects
 '''
+DESIRED_JOINT_INDICES = [12, 13, 14, 15, 16, 17, 18, 19]
+JOINT_INDEX_ASSOCIATION = dict(zip(DESIRED_JOINT_NAMES, DESIRED_JOINT_INDICES))
 video_path = "/mnt/e/IN-PERSON EXPERIMENT RECORDINGS/3HYPER FREEPLAY/3HYPER DV FREEPLAY/3HYPER.025 FREEPLAY DV.mp4"
 keypoints_path = "/mnt/c/3HYPER FREEPLAY DV METRABs/MATLAB Keypoints 2/2D Keypoints Processed/3HYPER.025 FREEPLAY DV PROCESSED 2D Keypoints.mat"
 
-# General class for figures with multiple subplots that require synchronization (ie. need to load simultaneously)
+# Class for figures with multiple subplots that require synchronization (ie. need to load simultaneously)
 class MultiDataSyncFigure:
     def __init__(self, num_rows:int, num_cols:int, dyad_number:int, video_path:str, keypoints_path:str, 
                  total_frames:int, x_label:list, y_label:list, titles:dict):
@@ -30,7 +32,8 @@ class MultiDataSyncFigure:
         
         # data params
         self.id = dyad_number
-        self.dyad_info = load_data_mat(keypoints_path)
+        self.dyad_info = load_data_mat(keypoints_path) # 1D signal 
+        self.joint_info = import_data(keypoints_path) # 2D joint coordinates
         
         # figure/plot params
         self.fig, self.ax = plt.subplots(num_rows, num_cols, figsize=(12, 10), sharex=True)
@@ -100,15 +103,39 @@ class MultiDataSyncFigure:
         btn_speed_down = Button(ax_speed_down, 'Speed -')
         btn_speed_up   = Button(ax_speed_up, 'Speed +')
         
+        # checkboxes for joints
+        check_ax = plt.axes([0.05, 0.4, 0.15, 0.15])
+        check = CheckButtons(check_ax, DESIRED_JOINT_NAMES)
+        
+        def check_callback(label):
+            joint_index = JOINT_INDEX_ASSOCIATION[label]
+            infant_joint_data = self.joint_info["Infant"][joint_index, : , :]
+            
+            
         current_speed = playback_speed
         
     def initialize_video(self, joint_name:str, frame_number=0:int):
         # plots first frame with joints
-    def draw_video_bg(self, frame_number:int):
+    def draw_video_bg(self, ax_number:int, frame_number:int):
         # plots frame overlay in the background
-    def plot_joint(self, joint_name:str):
+        if self.video:
+            video_frame = self.video.get_frame(frame_number)
+            if video_frame is not None:
+                extent = [0, self.video.width, self.video.height, 0]
+                self.ax[ax_number].imshow(video_frame, extent=extent, aspect='auto', zorder=0)
+                
+    def plot_joints(self, ax_number:int, frame_number:int):
         # plots joint keypoints
-    def update_figure(self, val:int, playback_speed=1.0:int,):
+        infant_joint_x, infant_joint_y = self.joint_info["infant"][:, 0, frame_number], self.joint_info["infant"][:, 1, frame_number]
+        parent_joint_x, parent_joint_y = self.joint_info["parent"][:, 0, frame_number], self.joint_info["parent"][:, 1, frame_number]
+        
+        infant_scatter = self.ax[ax_number].scatter(infant_joint_x, infant_joint_y, color='red', alpha=0.7)
+        parent_scatter = self.ax[ax_number].scatter(parent_joint_x, parent_joint_y, color='blue', alpha=0.7)
+        
+    def plot_wtc(self, joint_name:str, frame_number:int):
+        # plots wtc 
+        
+    def update_figure(self, val:int, playback_speed=1.0:int):
         # for video quality 
     def clear_figure(self):
         # free up memory after video is finished playing or is interrupted
