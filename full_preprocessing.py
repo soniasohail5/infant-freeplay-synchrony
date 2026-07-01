@@ -54,7 +54,7 @@ def plot_original_vs_preprocessed_signals(infant_original_data, parent_original_
 
 def main():
 
-    for file in os.listdir(keypoints_dir)[5:6]:
+    for file in os.listdir(keypoints_dir):
         keypoint_path = os.path.join(keypoints_dir, file)
         dyad_number = get_dyad_number(file)
         
@@ -76,7 +76,7 @@ def main():
         infant_modified_keypoints = np.zeros((24, infant_max_frames))
         parent_modified_keypoints = np.zeros((24, parent_max_frames))
         
-        for joint in range(24):
+        for joint in range(12, 20):
             for coordinate in range(2):
                 infant_original_signal = infant_keypoints[joint, coordinate, :]
                 parent_original_signal = parent_keypoints[joint, coordinate, :]
@@ -95,10 +95,11 @@ def main():
                 infant_intermediate_keypoints[joint, coordinate, :] = movmad_filter(infant_interpolated_signal, 30)
                 parent_intermediate_keypoints[joint, coordinate, :] = movmad_filter(parent_interpolated_signal, 30)
                 
+                '''
                 # Plot signal for verification
                 plot_original_vs_preprocessed_signals(infant_original_signal, parent_original_signal, infant_intermediate_keypoints[joint, coordinate, :], 
                                                       parent_intermediate_keypoints[joint, coordinate, :], dyad_number, joint, coordinate)
-                
+                '''
             # Normalize signal 
             print("Normalize signal using L2/Euclidean norm .....")
             infant_x, infant_y = infant_intermediate_keypoints[joint, 0, :], infant_intermediate_keypoints[joint, 1, :]
@@ -113,7 +114,7 @@ def main():
             parent_modified_keypoints[joint, :] = parent_normalized_signal
 
         # Save keypoints to .mat file for analysis 
-        # save_keypoints_in_mat(dyad_number, infant_modified_keypoints, parent_modified_keypoints, dst_dir)
+        save_keypoints_in_mat(dyad_number, infant_modified_keypoints, parent_modified_keypoints, dst_dir)
             
 if __name__ == "__main__":
     main()

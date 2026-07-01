@@ -19,7 +19,7 @@ minimize the number of computations done
 - one approach to solve this would be to break up the signal into its non-NaN segments, run CWT on each non-NaN segment
 and concatencate the coherence and CWT values before plotting
 '''
-
+DESIRED_JOINT_INDICES = [12, 13, 14, 15, 16, 17, 18, 19]
 mother = wavelet.Morlet(8) # taken from Fujiwara paper
 keypoints_dir = "/mnt/c/3HYPER FREEPLAY DV METRABs/MATLAB Keypoints 2/2D Keypoints Processed/3HYPER.025 FREEPLAY DV PROCESSED 2D Keypoints.mat"
 DESIRED_JOINT_NAMES = ["Neck", "Head", "Right Clavicle", "Left Clavicle", "Left Shoulder", "Right Shoulder", "Left Elbow", "Right Elbow"]
@@ -40,15 +40,15 @@ def load_data_mat(keypoints_path):
     dyad_number = get_dyad_number(dyad_name)
     dyad_info_mat = loadmat(keypoints_path)
     
-    infant_keypoints_timeseries = np.array(dyad_info_mat["Infant"])
-    parent_keypoints_timeseries = np.array(dyad_info_mat["Parent"])
+    infant_keypoints_timeseries = np.array(dyad_info_mat["Infant"][DESIRED_JOINT_INDICES, :])
+    parent_keypoints_timeseries = np.array(dyad_info_mat["Parent"][DESIRED_JOINT_INDICES, :])
     
     infant_info = {}
     parent_info = {}
     
     dyad_info["Dyad Number"] = dyad_number
     
-    for (joint, index) in zip(DESIRED_JOINT_NAMES, range(6)):
+    for (joint, index) in zip(DESIRED_JOINT_NAMES, range(len(DESIRED_JOINT_NAMES))):
         infant_info[joint] = infant_keypoints_timeseries[index, :]
         parent_info[joint] = parent_keypoints_timeseries[index, :]
         

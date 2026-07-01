@@ -2,27 +2,29 @@ import os
 import cv2
 import numpy as np
 import scipy.io as sio
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib.widgets import CheckButtons, Slider, Button
-from signal_postprocessing import lin_interp_threshold
 from missing_gaps_stats import get_video_name, get_dyad_number, import_data
 from single_dyad_wtc_analysis import load_data_mat, compute_wtc, DESIRED_JOINT_NAMES
-from signal_visualization_multi import apply_medfilt_to_all_keypoints, VideoLoader
+from signal_visualization_multi import VideoLoader
 
 '''
 Side-by-side visualization of WTC heatmap and skeletal overlays on raw video data to 
 get a better understanding of how low and high coherence regions map to physical interactions 
 between infant and parent subjects
 '''
+
 DESIRED_JOINT_INDICES = [12, 13, 14, 15, 16, 17, 18, 19]
 JOINT_INDEX_ASSOCIATION = dict(zip(DESIRED_JOINT_NAMES, DESIRED_JOINT_INDICES))
 video_path = "/mnt/e/IN-PERSON EXPERIMENT RECORDINGS/3HYPER FREEPLAY/3HYPER DV FREEPLAY/3HYPER.025 FREEPLAY DV.mp4"
-keypoints_path = "/mnt/c/3HYPER FREEPLAY DV METRABs/MATLAB Keypoints 2/2D Keypoints Processed/3HYPER.025 FREEPLAY DV PROCESSED 2D Keypoints.mat"
+joint_movement_path = "/mnt/c/3HYPER FREEPLAY DV METRABs/MATLAB Keypoints 2/2D Keypoints Processed/3HYPER.025 FREEPLAY DV PROCESSED 2D Keypoints.mat"
+keypoints_path = "/mnt/c/3HYPER FREEPLAY DV METRABs/MATLAB Keypoints 2/2D Keypoints/3HYPER.025 FREEPLAY DV EXTRACTED 2D Keypoints.mat"
 
 # Class for figures with multiple subplots that require synchronization (ie. need to load simultaneously)
 class MultiDataSyncFigure:
-    def __init__(self, num_rows:int, num_cols:int, dyad_number:int, video_path:str, keypoints_path:str, 
+    def __init__(self, num_rows:int, num_cols:int, dyad_number:int, video_path:str, movement_path:str, keypoints_path:str, 
                  total_frames:int, x_label:list, y_label:list, titles:dict):
         # video params
         self.video = VideoLoader(video_path)
@@ -34,11 +36,11 @@ class MultiDataSyncFigure:
         
         # data params
         self.id = dyad_number
-        self.dyad_info = load_data_mat(keypoints_path) # 1D signal 
-        self.joint_info = import_data(keypoints_path) # 2D joint coordinates
+        self.dyad_info = load_data_mat(movement_path) # 1D signal 
+        self.joint_info = import_data(keypoints_path) # 2D signal (joint, x/y, frame)
         
         # figure/plot params
-        self.fig, self.ax = plt.subplots(num_rows, num_cols, figsize=(12, 10), sharex=True)
+        self.fig, self.ax = plt.subplots(num_rows, num_cols, figsize=(10, 10), sharex=True)
         self.suptitle = titles["Figure Title"]
         self.sb_titles = titles["Subplot Titles"]
         self.x_labels = x_label
@@ -50,14 +52,13 @@ class MultiDataSyncFigure:
         self.timestamps = np.arange(self.frames)/self.fps
         self.current_joint = DESIRED_JOINT_NAMES[0]
         
-        
     def advance_frame(self):
         current_frame = int(self.slider.val)
         next_frame = current_frame + max(1, int(self.playback_speed))
         
         if next_frame >= self.frames:
-            self.btn_pause_callback()
-            self.timer_stop()
+            self.is_playing = False
+            self.timer.stop()
             return
         
         self.slider.set_val(next_frame)
@@ -66,9 +67,7 @@ class MultiDataSyncFigure:
         current_frame = int(self.slider.val)
         current_time = current_frame/self.fps
         self.time_text.set_text(f'Time:{current_time:.2f}s | Speed: {self.playback_speed}x')
-    
-    def preprocess_joint_data(self):
-        
+     
     def get_wtc(self):
         dt = 1/self.fps 
         s0 = 2 * dt
@@ -95,11 +94,11 @@ class MultiDataSyncFigure:
         
         # fig and axes 
         for (a, i, subtitle) in zip(self.ax, range(len(self.x_labels)), self.sb_titles):
-            a.set_title(self.sb_titles[subtitle])
+            a.set_title(subtitle)
             a.set_xlabel(self.x_labels[i])
             a.set_ylabel(self.y_labels[i])
-            a.set_xlim(self.x_lim)
-            a.set_ylim(self.y_lim)
+            a.set_xlim(0, self.x_lim)
+            a.set_ylim(0, self.y_lim)
             
         # slider
         ax_slider = plt.axes([0.15, 0.08, 0.7, 0.02])
@@ -159,7 +158,7 @@ class MultiDataSyncFigure:
             self.update_time_text()
             
         def btn_speed_up_callback(event):
-            self.playback_speed = max(4.0, self.playback_speed + 0.25)
+            self.playback_speed = min(4.0, self.playback_speed + 0.25)
             self.update_time_text()
             
         self.btn_play.on_clicked(btn_play_callback)
@@ -195,12 +194,9 @@ class MultiDataSyncFigure:
             self.update_figure(current_frame)
             
         self.check.on_clicked(check_callback)
-        
 
     def initialize_video(self, joint_name:str, frame_number:int = 0):
         # plots first frame with joints
-        infant_joint_data, parent_joint_data = self.joint_info["infant"], self.joint_info["parent"]
-        infant_movement_data, parent_movement_data = self.dyad_info["Infant"], self.joint_info["Parent"]
         self.current_joint = joint_name
         self.get_wtc()  # needed before plot_wtc can access self.all_wtc_data
         self.draw_video_bg(ax_number=0, frame_number=frame_number)
@@ -221,6 +217,7 @@ class MultiDataSyncFigure:
         joint_index = JOINT_INDEX_ASSOCIATION[joint_name]
         infant_joint_x, infant_joint_y = self.joint_info["infant"][joint_index, 0, frame_number], self.joint_info["infant"][joint_index, 1, frame_number]
         parent_joint_x, parent_joint_y = self.joint_info["parent"][joint_index, 0, frame_number], self.joint_info["parent"][joint_index, 1, frame_number]
+        self.ax[ax_number].invert_yaxis()  # invert y-axis to match video coordinates
         
         self.ax[ax_number].scatter(infant_joint_x, infant_joint_y, color='red', alpha=0.7)
         self.ax[ax_number].scatter(parent_joint_x, parent_joint_y, color='blue', alpha=0.7)
@@ -243,9 +240,11 @@ class MultiDataSyncFigure:
         if not hasattr(self, 'wtc_mesh'):
             # initialize the pcolormesh object 
             self.wtc_mesh = self.ax[ax_number].pcolormesh(self.timestamps, period, wtc_masked, 
-                                                          cmap='jet', vmin=0, vmax=1, shading='auto')
+                                                          cmap='jet', vmin=0, vmax=1)
             self.ax[ax_number].set_yscale('log', base=2)
-            self.ax[ax_number].invert_yaxis()
+            self.ax[ax_number].set_yticks([0.03, 0.06, 0.12, 0.25, 0.5, 1, 2, 4, 8])
+            self.ax[ax_number].get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
+            self.ax[ax_number].set_ylim([period.min(), period.max()])
             self.fig.colorbar(self.wtc_mesh, ax=self.ax[ax_number], label='Coherence')
         else:
             self.wtc_mesh.set_array(wtc_masked[:-1, :-1].ravel())
@@ -264,7 +263,31 @@ class MultiDataSyncFigure:
         self.timer.stop()
         self.video.video.release() if hasattr(self.video, 'video') else None
         plt.close(self.fig)
+
+def main():
+    titles = {
+        "Figure Title": "WTC Visualization - Dyad #25",
+        "Subplot Titles": ["Video", "Wavelet Coherence"]
+    }
     
+    fig_obj = MultiDataSyncFigure(
+        num_rows=2, num_cols=1,
+        dyad_number=25,
+        video_path=video_path, 
+        movement_path=joint_movement_path,
+        keypoints_path=keypoints_path,
+        total_frames=6607,
+        x_label=["Time (s)", "Time (s)"],
+        y_label=["", "Period (s)"],
+        titles=titles
+    )
+    
+    fig_obj.set_axes()
+    fig_obj.initialize_video(joint_name=DESIRED_JOINT_NAMES[0])
+    plt.show()
+
+if __name__ == "__main__":
+    main()
         
         
 
