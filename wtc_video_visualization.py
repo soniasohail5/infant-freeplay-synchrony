@@ -174,7 +174,7 @@ class MultiDataSyncFigure:
         slider.on_changed(self.update_figure)
             
         # checkboxes for joints
-        check_ax = plt.axes([0.05, 0.4, 0.15, 0.15])
+        check_ax = plt.axes([0.75, 0.4, 0.15, 0.15])
         self.check = CheckButtons(check_ax, DESIRED_JOINT_NAMES)
         
         def check_callback(label):
@@ -182,12 +182,14 @@ class MultiDataSyncFigure:
             for joint in DESIRED_JOINT_NAMES:
                 if joint != label and self.check.get_status()[DESIRED_JOINT_NAMES.index(joint)]:
                    self.check.set_active(DESIRED_JOINT_NAMES.index(joint))
-            
+                   
             # update current joint
             self.current_joint = label 
             
             if hasattr(self, 'wtc_mesh'):
                 del self.wtc_mesh
+                self.colorbar.remove()
+                del self.colorbar
   
             # get current frame index from slider
             current_frame = int(slider.val)
@@ -205,6 +207,8 @@ class MultiDataSyncFigure:
         
     def draw_video_bg(self, ax_number:int, frame_number:int):
         # plots frame overlay in the background
+        if frame_number == 0:
+            self.ax[ax_number].invert_yaxis()  # invert y-axis to match video coordinates
         if self.video:
             video_frame = self.video.get_frame(frame_number)
             if video_frame is not None:
@@ -217,10 +221,9 @@ class MultiDataSyncFigure:
         joint_index = JOINT_INDEX_ASSOCIATION[joint_name]
         infant_joint_x, infant_joint_y = self.joint_info["infant"][joint_index, 0, frame_number], self.joint_info["infant"][joint_index, 1, frame_number]
         parent_joint_x, parent_joint_y = self.joint_info["parent"][joint_index, 0, frame_number], self.joint_info["parent"][joint_index, 1, frame_number]
-        self.ax[ax_number].invert_yaxis()  # invert y-axis to match video coordinates
         
-        self.ax[ax_number].scatter(infant_joint_x, infant_joint_y, color='red', alpha=0.7)
-        self.ax[ax_number].scatter(parent_joint_x, parent_joint_y, color='blue', alpha=0.7)
+        self.infant_plotted = self.ax[ax_number].scatter(infant_joint_x, infant_joint_y, color='red', alpha=0.7)
+        self.parent_plotted = self.ax[ax_number].scatter(parent_joint_x, parent_joint_y, color='blue', alpha=0.7)
         
     def plot_wtc(self, ax_number:int, frame_number:int):
         # plots wtc
@@ -228,6 +231,7 @@ class MultiDataSyncFigure:
         wtc_data = self.all_wtc_data[joint_name]
         wtc = wtc_data["WTC"]
         freq = wtc_data["Frequency"]
+        sig = wtc_data["Significance"]
         period = 1/freq
         
         n_freq, n_time = wtc.shape
@@ -245,7 +249,7 @@ class MultiDataSyncFigure:
             self.ax[ax_number].set_yticks([0.03, 0.06, 0.12, 0.25, 0.5, 1, 2, 4, 8])
             self.ax[ax_number].get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
             self.ax[ax_number].set_ylim([period.min(), period.max()])
-            self.fig.colorbar(self.wtc_mesh, ax=self.ax[ax_number], label='Coherence')
+            self.colorbar = self.fig.colorbar(self.wtc_mesh, ax=self.ax[ax_number], label='Coherence')
         else:
             self.wtc_mesh.set_array(wtc_masked[:-1, :-1].ravel())
             
