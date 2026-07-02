@@ -19,6 +19,7 @@ minimize the number of computations done
 - one approach to solve this would be to break up the signal into its non-NaN segments, run CWT on each non-NaN segment
 and concatencate the coherence and CWT values before plotting
 '''
+
 DESIRED_JOINT_INDICES = [12, 13, 14, 15, 16, 17, 18, 19]
 mother = wavelet.Morlet(8) # taken from Fujiwara paper
 keypoints_dir = "/mnt/c/3HYPER FREEPLAY DV METRABs/MATLAB Keypoints 2/2D Keypoints Processed/3HYPER.025 FREEPLAY DV PROCESSED 2D Keypoints.mat"

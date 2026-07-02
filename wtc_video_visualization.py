@@ -40,7 +40,7 @@ class MultiDataSyncFigure:
         self.joint_info = import_data(keypoints_path) # 2D signal (joint, x/y, frame)
         
         # figure/plot params
-        self.fig, self.ax = plt.subplots(num_rows, num_cols, figsize=(10, 10), sharex=True)
+        self.fig, self.ax = plt.subplots(num_rows, num_cols, figsize=(10, 10))
         self.suptitle = titles["Figure Title"]
         self.sb_titles = titles["Subplot Titles"]
         self.x_labels = x_label
@@ -51,6 +51,12 @@ class MultiDataSyncFigure:
         self.y_lim = self.video.height
         self.timestamps = np.arange(self.frames)/self.fps
         self.current_joint = DESIRED_JOINT_NAMES[0]
+        
+        self.fig.canvas.mpl_connect('close_event', self._on_close)
+        
+    def _on_close(self, event):
+        self.timer.stop()
+        self.is_playing = False
         
     def advance_frame(self):
         current_frame = int(self.slider.val)
@@ -204,17 +210,29 @@ class MultiDataSyncFigure:
         self.draw_video_bg(ax_number=0, frame_number=frame_number)
         self.plot_joints(ax_number=0, frame_number=frame_number)
         self.plot_wtc(ax_number=1, frame_number=frame_number)
-        
+    
+    def preload_frames(self, max_frames=500):
+        # pre load frames into RAM before playback begins 
+        self.frame_cache = {}
+        for i in range(min(max_frames, self.frames)):
+            self.frame_cache[i] = self.video.get_frame(i)
+            
     def draw_video_bg(self, ax_number:int, frame_number:int):
         # plots frame overlay in the background
+        
         if frame_number == 0:
             self.ax[ax_number].invert_yaxis()  # invert y-axis to match video coordinates
+            
         if self.video:
             video_frame = self.video.get_frame(frame_number)
+            video_frame = cv2.resize(video_frame, (640, 360)) # downsample before caching
             if video_frame is not None:
-                extent = [0, self.video.width, self.video.height, 0]
-                self.ax[ax_number].imshow(video_frame, extent=extent, aspect='auto', zorder=0)
-                
+                if not hasattr(self, 'video_im'):
+                    extent = [0, self.video.width, self.video.height, 0]
+                    self.video_im = self.ax[ax_number].imshow(video_frame, extent=extent, aspect='auto', zorder=0)
+                else:
+                    self.video_im.set_data(video_frame)
+                    
     def plot_joints(self, ax_number:int, frame_number:int):
         # plots joint keypoints
         joint_name = self.current_joint
@@ -222,8 +240,12 @@ class MultiDataSyncFigure:
         infant_joint_x, infant_joint_y = self.joint_info["infant"][joint_index, 0, frame_number], self.joint_info["infant"][joint_index, 1, frame_number]
         parent_joint_x, parent_joint_y = self.joint_info["parent"][joint_index, 0, frame_number], self.joint_info["parent"][joint_index, 1, frame_number]
         
-        self.infant_plotted = self.ax[ax_number].scatter(infant_joint_x, infant_joint_y, color='red', alpha=0.7)
-        self.parent_plotted = self.ax[ax_number].scatter(parent_joint_x, parent_joint_y, color='blue', alpha=0.7)
+        if not hasattr(self, 'infant_scatter'):
+            self.infant_scatter = self.ax[ax_number].scatter(infant_joint_x, infant_joint_y, color='red', alpha=0.7)
+            self.parent_scatter = self.ax[ax_number].scatter(parent_joint_x, parent_joint_y, color='blue', alpha=0.7)
+        else:
+            self.infant_scatter.set_offsets([[infant_joint_x, infant_joint_y]])
+            self.parent_scatter.set_offsets([[parent_joint_x, parent_joint_y]])
         
     def plot_wtc(self, ax_number:int, frame_number:int):
         # plots wtc
@@ -235,23 +257,28 @@ class MultiDataSyncFigure:
         period = 1/freq
         
         n_freq, n_time = wtc.shape
+        wtc_timestamps = np.arange(n_time)/self.fps
         
         # rather than adding each new column to the wtc, 
         # mask future coherence values and unmask them as the video plays 
         wtc_masked = np.full_like(wtc, np.nan)
         wtc_masked[:, :frame_number] = wtc[:, :frame_number]
         
-        if not hasattr(self, 'wtc_mesh'):
-            # initialize the pcolormesh object 
-            self.wtc_mesh = self.ax[ax_number].pcolormesh(self.timestamps, period, wtc_masked, 
-                                                          cmap='jet', vmin=0, vmax=1)
+        if not hasattr(self, 'wtc_axis_intitialized'):
+            # set up axes properties only once
             self.ax[ax_number].set_yscale('log', base=2)
             self.ax[ax_number].set_yticks([0.03, 0.06, 0.12, 0.25, 0.5, 1, 2, 4, 8])
             self.ax[ax_number].get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
-            self.ax[ax_number].set_ylim([period.min(), period.max()])
+            self.ax[ax_number].set_ylim([freq.min(), freq.max()])
+            self.ax[ax_number].set_xlim([0, wtc_timestamps[-1]])
+            
+        if not hasattr(self, 'wtc_mesh'):
+            # initialize the pcolormesh object 
+            self.wtc_mesh = self.ax[ax_number].pcolormesh(wtc_timestamps, freq, wtc_masked, 
+                                                          cmap='jet', vmin=0, vmax=1)
             self.colorbar = self.fig.colorbar(self.wtc_mesh, ax=self.ax[ax_number], label='Coherence')
         else:
-            self.wtc_mesh.set_array(wtc_masked[:-1, :-1].ravel())
+            self.wtc_mesh.set_array(wtc_masked.ravel())
             
     def update_figure(self, val:int):
         # for video quality 
@@ -260,7 +287,12 @@ class MultiDataSyncFigure:
         self.plot_joints(ax_number=0, frame_number=frame_number)
         self.plot_wtc(ax_number=1, frame_number=frame_number)
         self.update_time_text()
+        self.ax[0].draw_artist(self.video_im)
+        self.ax[0].draw_artist(self.infant_scatter) # redraw only video
+        self.ax[0].draw_artist(self.parent_scatter) # redraw only scatter
+        self.fig.canvas.blit(self.ax[0].bbox) 
         self.fig.canvas.draw_idle()
+        self.fig.canvas.flush_events()
         
     def clear_figure(self):
         # free up memory after video is finished playing or is interrupted
