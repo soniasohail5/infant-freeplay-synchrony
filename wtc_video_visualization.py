@@ -31,7 +31,7 @@ class MultiDataSyncFigure:
         self.video._open_video()
         self.fps = self.video.fps
         self.frames = total_frames
-        self.playback_speed = 1.0
+        self.playback_speed = 8.0
         self.is_playing = False
         
         # data params
@@ -86,7 +86,7 @@ class MultiDataSyncFigure:
                          "Frequency": freq, "Significance": sig}
             self.all_wtc_data[joint_name] = wtc_data
             
-    def set_axes(self, playback_speed=1.0):
+    def set_axes(self, playback_speed=8.0):
         # places the titles, axes, and buttons for each plot 
         self.fig.suptitle(self.suptitle)
         
@@ -107,7 +107,7 @@ class MultiDataSyncFigure:
             a.set_ylim(0, self.y_lim)
             
         # slider
-        ax_slider = plt.axes([0.15, 0.08, 0.7, 0.02])
+        ax_slider = plt.axes([0.15, 0.04, 0.7, 0.02])
         slider = Slider(ax_slider, 'Frame', valmin=0, valmax=max(1, self.frames - 1),
                         valinit=0, valstep=1)
             
@@ -164,7 +164,7 @@ class MultiDataSyncFigure:
             self.update_time_text()
             
         def btn_speed_up_callback(event):
-            self.playback_speed = min(4.0, self.playback_speed + 0.25)
+            self.playback_speed = min(16.5, self.playback_speed + 0.25)
             self.update_time_text()
             
         self.btn_play.on_clicked(btn_play_callback)
@@ -180,7 +180,7 @@ class MultiDataSyncFigure:
         slider.on_changed(self.update_figure)
             
         # checkboxes for joints
-        check_ax = plt.axes([0.75, 0.4, 0.15, 0.15])
+        check_ax = plt.axes([0.75, 0.73, 0.15, 0.15])
         self.check = CheckButtons(check_ax, DESIRED_JOINT_NAMES)
         
         def check_callback(label):
@@ -254,6 +254,7 @@ class MultiDataSyncFigure:
         wtc = wtc_data["WTC"]
         freq = wtc_data["Frequency"]
         sig = wtc_data["Significance"]
+        coi = wtc_data["COI"]
         period = 1/freq
         
         n_freq, n_time = wtc.shape
