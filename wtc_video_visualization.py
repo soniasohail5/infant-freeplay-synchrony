@@ -89,6 +89,7 @@ class MultiDataSyncFigure:
     def set_axes(self, playback_speed=8.0):
         # places the titles, axes, and buttons for each plot 
         self.fig.suptitle(self.suptitle)
+        plt.subplots_adjust(top=0.93)
         
         if len(self.x_labels) != len(self.y_labels):
             print("Mismatch between number of x and y labels.")
@@ -112,7 +113,7 @@ class MultiDataSyncFigure:
                         valinit=0, valstep=1)
             
         # time display
-        time_text = self.fig.text(0.5, 0.03, f'Time: 0.00s | Speed: {playback_speed}x',
+        time_text = self.fig.text(0.5, 0.05, f'Time: 0.00s | Speed: {playback_speed}x',
                              ha='center', fontsize=12)
         self.time_text = time_text
         
@@ -265,6 +266,12 @@ class MultiDataSyncFigure:
         wtc_masked = np.full_like(wtc, np.nan)
         wtc_masked[:, :frame_number] = wtc[:, :frame_number]
         
+        sig_clean = np.nan_to_num(sig, nan=0.0)
+        wtc_sig_plot = sig_clean[:, np.newaxis] * np.ones_like(wtc_masked)
+        
+        coi_masked = np.full_like(coi, np.nan, dtype=float)
+        coi_masked[:frame_number] = 1/coi[:frame_number]
+        
         if not hasattr(self, 'wtc_axis_intitialized'):
             # set up axes properties only once
             self.ax[ax_number].set_yscale('log', base=2)
@@ -280,6 +287,12 @@ class MultiDataSyncFigure:
             self.colorbar = self.fig.colorbar(self.wtc_mesh, ax=self.ax[ax_number], label='Coherence')
         else:
             self.wtc_mesh.set_array(wtc_masked.ravel())
+            
+        valid = ~np.isnan(coi_masked)
+        if valid.any() and not hasattr(self, 'coi_filled'):
+            self.coi_fill =  self.ax[ax_number].fill_between(wtc_timestamps[valid], coi_masked[valid], freq.min(), alpha=0.2, color='gray', hatch='x')
+            
+        self.ax[ax_number].contour(wtc_timestamps, freq, wtc/wtc_sig_plot, levels=[1.0], colors='black', linewidths=1.5)
             
     def update_figure(self, val:int):
         # for video quality 
@@ -315,7 +328,7 @@ def main():
         keypoints_path=keypoints_path,
         total_frames=6607,
         x_label=["Time (s)", "Time (s)"],
-        y_label=["", "Period (s)"],
+        y_label=["", "Frequency (Hz)"],
         titles=titles
     )
     
