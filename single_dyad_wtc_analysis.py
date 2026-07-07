@@ -72,7 +72,9 @@ def preprocess_signal(signal):
 def compute_wtc(dyad_info, joint_name, s0, dt, dj=1/12, significance_level=0.95):
 # Calculates the continuous wavelet transform (CWT) for the infant and parent joint timeseries
 # Uses CWT from infant and parent to calculate coherence (formula can be found in the Fujiwara paper)
-    
+    if isinstance(joint_name, list):
+        if len(joint_name) == 2:
+            
     infant_signal = preprocess_signal(dyad_info["Infant"][joint_name])
     parent_signal = preprocess_signal(dyad_info["Parent"][joint_name])
     

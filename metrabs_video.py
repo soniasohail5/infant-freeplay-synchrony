@@ -6,6 +6,7 @@ import tensorflow as tf
 import json
 import tensorflow_hub as hub
 import cv2
+
 os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = '/home/infantresearch/tf219/tf219/lib/python3.12/site-packages/cv2/qt/plugins/platforms/libqxcb.so'
 
 # Joint keypoint extraction from videos in real-time (frames are extracted from OpenCV and inputed to MeTRABS one at a time)
@@ -54,7 +55,7 @@ def visualize_matplotlib(image, pred, joint_names, joint_edges, save_filepath):
 def visualize(image, pred, joint_names, joint_edges, save_filepath):
         visualize_matplotlib(image, pred, joint_names, joint_edges, save_filepath)
         
-folder_dir = "/mnt/e/IN-PERSON EXPERIMENT RECORDINGS/3HYPER FREEPLAY/3HYPER DV FREEPLAY/keypoint extraction"
+folder_dir = "/mnt/e/IN-PERSON EXPERIMENT RECORDINGS/3HYPER FREEPLAY/3HYPER DV FREEPLAY/keypoint extraction 7-7-2026"
 dst_dir = "/mnt/c/3HYPER FREEPLAY DV METRABS"
 video_duration = 240
 
