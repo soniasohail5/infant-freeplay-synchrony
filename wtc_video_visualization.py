@@ -31,7 +31,7 @@ class MultiDataSyncFigure:
         self.video._open_video()
         self.fps = self.video.fps
         self.frames = total_frames
-        self.playback_speed = 8.0
+        self.playback_speed = self.video.fps
         self.is_playing = False
         
         # data params
@@ -72,7 +72,7 @@ class MultiDataSyncFigure:
     def update_time_text(self):
         current_frame = int(self.slider.val)
         current_time = current_frame/self.fps
-        self.time_text.set_text(f'Time:{current_time:.2f}s | Speed: {self.playback_speed}x')
+        self.time_text.set_text(f'Time:{current_time:.2f}s | Speed: {self.playback_speed/self.video.fps}x')
      
     def get_wtc(self):
         dt = 1/self.fps 
@@ -181,7 +181,7 @@ class MultiDataSyncFigure:
         slider.on_changed(self.update_figure)
             
         # checkboxes for joints
-        check_ax = plt.axes([0.75, 0.73, 0.15, 0.15])
+        check_ax = plt.axes([0.75, 0.73, 0.12, 0.15])
         self.check = CheckButtons(check_ax, DESIRED_JOINT_NAMES)
         
         def check_callback(label):
@@ -194,9 +194,10 @@ class MultiDataSyncFigure:
             self.current_joint = label 
             
             if hasattr(self, 'wtc_mesh'):
-                del self.wtc_mesh
                 self.colorbar.remove()
                 del self.colorbar
+                self.wtc_mesh.remove()
+                del self.wtc_mesh
                 self.contour_regions.remove()
                 del self.contour_regions
   
