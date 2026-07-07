@@ -197,6 +197,8 @@ class MultiDataSyncFigure:
                 del self.wtc_mesh
                 self.colorbar.remove()
                 del self.colorbar
+                self.contour_regions.remove()
+                del self.contour_regions
   
             # get current frame index from slider
             current_frame = int(slider.val)
@@ -285,6 +287,7 @@ class MultiDataSyncFigure:
             self.wtc_mesh = self.ax[ax_number].pcolormesh(wtc_timestamps, freq, wtc_masked, 
                                                           cmap='jet', vmin=0, vmax=1)
             self.colorbar = self.fig.colorbar(self.wtc_mesh, ax=self.ax[ax_number], label='Coherence')
+            self.contour_regions = self.ax[ax_number].contour(wtc_timestamps, freq, wtc/wtc_sig_plot, levels=[1.0], colors='black', linewidths=1.5)
         else:
             self.wtc_mesh.set_array(wtc_masked.ravel())
             
@@ -292,7 +295,6 @@ class MultiDataSyncFigure:
         if valid.any() and not hasattr(self, 'coi_filled'):
             self.coi_fill =  self.ax[ax_number].fill_between(wtc_timestamps[valid], coi_masked[valid], freq.min(), alpha=0.2, color='gray', hatch='x')
             
-        self.ax[ax_number].contour(wtc_timestamps, freq, wtc/wtc_sig_plot, levels=[1.0], colors='black', linewidths=1.5)
             
     def update_figure(self, val:int):
         # for video quality 
