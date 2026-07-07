@@ -60,7 +60,7 @@ class MultiDataSyncFigure:
         
     def advance_frame(self):
         current_frame = int(self.slider.val)
-        next_frame = current_frame + max(1, int(self.playback_speed))
+        next_frame = current_frame + max(2 * self.video.fps, int(self.playback_speed))
         
         if next_frame >= self.frames:
             self.is_playing = False
@@ -72,7 +72,7 @@ class MultiDataSyncFigure:
     def update_time_text(self):
         current_frame = int(self.slider.val)
         current_time = current_frame/self.fps
-        self.time_text.set_text(f'Time:{current_time:.2f}s | Speed: {self.playback_speed/self.video.fps}x')
+        self.time_text.set_text(f'Time:{current_time:.2f}s | Speed: {self.playback_speed/self.video.fps:.4}x')
      
     def get_wtc(self):
         dt = 1/self.fps 
@@ -86,7 +86,7 @@ class MultiDataSyncFigure:
                          "Frequency": freq, "Significance": sig}
             self.all_wtc_data[joint_name] = wtc_data
             
-    def set_axes(self, playback_speed=8.0):
+    def set_axes(self):
         # places the titles, axes, and buttons for each plot 
         self.fig.suptitle(self.suptitle)
         plt.subplots_adjust(top=0.93)
@@ -113,7 +113,7 @@ class MultiDataSyncFigure:
                         valinit=0, valstep=1)
             
         # time display
-        time_text = self.fig.text(0.5, 0.05, f'Time: 0.00s | Speed: {playback_speed}x',
+        time_text = self.fig.text(0.5, 0.05, f'Time: 0.00s | Speed: {self.playback_speed/self.video.fps:.4}x',
                              ha='center', fontsize=12)
         self.time_text = time_text
         
@@ -181,7 +181,7 @@ class MultiDataSyncFigure:
         slider.on_changed(self.update_figure)
             
         # checkboxes for joints
-        check_ax = plt.axes([0.75, 0.73, 0.12, 0.15])
+        check_ax = plt.axes([0.75, 0.73, 0.15, 0.15])
         self.check = CheckButtons(check_ax, DESIRED_JOINT_NAMES)
         
         def check_callback(label):
@@ -224,7 +224,7 @@ class MultiDataSyncFigure:
     def draw_video_bg(self, ax_number:int, frame_number:int):
         # plots frame overlay in the background
         
-        if frame_number == 0:
+        if frame_number == 0 and not hasattr(self, 'wtc_axis_intitialized'):
             self.ax[ax_number].invert_yaxis()  # invert y-axis to match video coordinates
             
         if self.video:
