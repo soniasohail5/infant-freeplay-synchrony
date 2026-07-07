@@ -74,9 +74,13 @@ def compute_wtc(dyad_info, joint_name, s0, dt, dj=1/12, significance_level=0.95)
 # Uses CWT from infant and parent to calculate coherence (formula can be found in the Fujiwara paper)
     if isinstance(joint_name, list):
         if len(joint_name) == 2:
-            
-    infant_signal = preprocess_signal(dyad_info["Infant"][joint_name])
-    parent_signal = preprocess_signal(dyad_info["Parent"][joint_name])
+            infant_signal = preprocess_signal(dyad_info["Infant"][joint_name[0]])
+            parent_signal = preprocess_signal(dyad_info["Parent"][joint_name[1]])
+        else:
+            raise Exception("Number of joint names exceed number of subjects for WTC.")
+    else:
+        infant_signal = preprocess_signal(dyad_info["Infant"][joint_name])
+        parent_signal = preprocess_signal(dyad_info["Parent"][joint_name])
     
     wct, a_wct, coi, freq, sig = wavelet.wct(infant_signal, parent_signal, dt, dj, s0, 
                                 wavelet='morlet', significance_level=significance_level, mc_count=1)
