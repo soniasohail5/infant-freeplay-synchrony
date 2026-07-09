@@ -82,11 +82,19 @@ class MultiDataSyncFigure:
         self.all_wtc_data = {}
         
         # calculate wtc for all joints beforehand to avoid pauses in videoplay with another joint is selected
-        for joint_name in DESIRED_JOINT_NAMES:
-            wtc, a_wct, coi, freq, sig  = compute_wtc(self.dyad_info, joint_name, s0, dt)
-            wtc_data = {"WTC": wtc, "Phase Angles": a_wct, "COI": coi, 
-                         "Frequency": freq, "Significance": sig}
-            self.all_wtc_data[joint_name] = wtc_data
+        for infant_joint in DESIRED_JOINT_NAMES:
+            for parent_joint in DESIRED_JOINT_NAMES:
+                joint_pair  = [infant_joint, parent_joint]
+            
+                if infant_joint == parent_joint:
+                    joint_pair_str = parent_joint 
+                else:
+                    joint_pair_str = infant_joint + ", " + parent_joint
+                    
+                wtc, a_wct, coi, freq, sig  = compute_wtc(self.dyad_info, joint_pair, s0, dt)
+                wtc_data = {"WTC": wtc, "Phase Angles": a_wct, "COI": coi, 
+                            "Frequency": freq, "Significance": sig}
+                self.all_wtc_data[joint_pair_str] = wtc_data
             
     def set_axes(self):
         # places the titles, axes, and buttons for each plot 
@@ -201,9 +209,11 @@ class MultiDataSyncFigure:
                 self.colorbar.remove()
                 self.wtc_mesh.remove()
                 self.contour_regions.remove()
+                self.coi_fill.remove()
                 del self.contour_regions
                 del self.colorbar
                 del self.wtc_mesh
+                del self.coi_fill
   
             # get current frame index from slider
             current_frame = int(slider.val)
@@ -227,7 +237,7 @@ class MultiDataSyncFigure:
                 del self.colorbar
                 del self.wtc_mesh
                 del self.coi_fill
-                
+
             # get current frame index from slider
             current_frame = int(slider.val)
             self.update_figure(current_frame)
@@ -267,10 +277,10 @@ class MultiDataSyncFigure:
                     
     def plot_joints(self, ax_number:int, frame_number:int):
         # plots joint keypoints
-        joint_name = self.current_joint
-        joint_index = JOINT_INDEX_ASSOCIATION[joint_name]
-        infant_joint_x, infant_joint_y = self.joint_info["infant"][joint_index, 0, frame_number], self.joint_info["infant"][joint_index, 1, frame_number]
-        parent_joint_x, parent_joint_y = self.joint_info["parent"][joint_index, 0, frame_number], self.joint_info["parent"][joint_index, 1, frame_number]
+        joint_names = [self.infant_selected_joint, self.parent_selected_joint]
+        joint_index = [JOINT_INDEX_ASSOCIATION[joint] for joint in joint_names]
+        infant_joint_x, infant_joint_y = self.joint_info["infant"][joint_index[0], 0, frame_number], self.joint_info["infant"][joint_index[0], 1, frame_number]
+        parent_joint_x, parent_joint_y = self.joint_info["parent"][joint_index[1], 0, frame_number], self.joint_info["parent"][joint_index[1], 1, frame_number]
         
         if not hasattr(self, 'infant_scatter'):
             self.infant_scatter = self.ax[ax_number].scatter(infant_joint_x, infant_joint_y, color='red', alpha=0.7)
@@ -281,12 +291,17 @@ class MultiDataSyncFigure:
         
     def plot_wtc(self, ax_number:int, frame_number:int):
         # plots wtc
-        joint_name = self.current_joint
-        wtc_data = self.all_wtc_data[joint_name]
+        if self.infant_selected_joint == self.parent_selected_joint:
+            joint_pair = self.infant_selected_joint
+        else:
+            joint_pair = self.infant_selected_joint + ", " + self.parent_selected_joint
+            
+        wtc_data = self.all_wtc_data[joint_pair]
         wtc = wtc_data["WTC"]
         freq = wtc_data["Frequency"]
         sig = wtc_data["Significance"]
         coi = wtc_data["COI"]
+        phase_angles = wtc_data["Phase Angles"]
         period = 1/freq
         
         n_freq, n_time = wtc.shape
@@ -324,6 +339,28 @@ class MultiDataSyncFigure:
         if valid.any() and not hasattr(self, 'coi_filled'):
             self.coi_fill =  self.ax[ax_number].fill_between(wtc_timestamps[valid], coi_masked[valid], freq.min(), alpha=0.2, color='gray', hatch='x')
             
+        if hasattr(self, 'phase_arrows'):
+            self.phase_arrows.remove()
+            del self.phase_arrows
+            
+        sig_mask = wtc > sig_clean[:, np.newaxis]
+        t_skip = 50
+        p_skip = 2
+        
+        if frame_number > 1:
+            if frame_number % t_skip == 0 or not hasattr(self, 'phase_arrows'):
+                t_indices = np.arange(0, min(frame_number, n_time), t_skip)
+                p_indices = np.arange(0, len(freq), p_skip)
+                t_grid, p_grid = np.meshgrid(wtc_timestamps[t_indices], freq[p_indices])
+                
+                u = np.cos(phase_angles[np.ix_(p_indices, t_indices)])
+                v = np.sin(phase_angles[np.ix_(p_indices, t_indices)])
+                mask = sig_mask[np.ix_(p_indices, t_indices)]
+                
+                if mask.any():
+                    self.phase_arrows = self.ax[ax_number].quiver(t_grid[mask], p_grid[mask], u[mask], v[mask],
+                                                                  units='width', pivot='mid', headwidth=3, width=0.002, scale=50, color='black', zorder=6)
+
     def update_figure(self, val:int):
         # for video quality 
         frame_number = int(val)
