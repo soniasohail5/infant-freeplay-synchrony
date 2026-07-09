@@ -51,6 +51,8 @@ class MultiDataSyncFigure:
         self.y_lim = self.video.height
         self.timestamps = np.arange(self.frames)/self.fps
         self.current_joint = DESIRED_JOINT_NAMES[0]
+        self.infant_selected_joint = DESIRED_JOINT_NAMES[0]
+        self.parent_selected_joint = DESIRED_JOINT_NAMES[0]
         
         self.fig.canvas.mpl_connect('close_event', self._on_close)
         
@@ -181,31 +183,57 @@ class MultiDataSyncFigure:
         slider.on_changed(self.update_figure)
             
         # checkboxes for joints
-        check_ax = plt.axes([0.75, 0.73, 0.15, 0.15])
-        self.check = CheckButtons(check_ax, DESIRED_JOINT_NAMES)
+        infant_check_ax = plt.axes([0.75, 0.73, 0.15, 0.15])
+        parent_check_ax = plt.axes([0.25, 0.45, 0.15, 0.15])
+        self.infant_check = CheckButtons(infant_check_ax, DESIRED_JOINT_NAMES)
+        self.parent_check = CheckButtons(parent_check_ax, DESIRED_JOINT_NAMES)
         
-        def check_callback(label):
+        def infant_check_callback(label):
             # ensures that only one joint is selected at a time
             for joint in DESIRED_JOINT_NAMES:
-                if joint != label and self.check.get_status()[DESIRED_JOINT_NAMES.index(joint)]:
-                   self.check.set_active(DESIRED_JOINT_NAMES.index(joint))
+                if joint != label and self.infant_check.get_status()[DESIRED_JOINT_NAMES.index(joint)]:
+                   self.infant_check.set_active(DESIRED_JOINT_NAMES.index(joint))
                    
             # update current joint
-            self.current_joint = label 
+            self.infant_selected_joint = label 
             
             if hasattr(self, 'wtc_mesh'):
                 self.colorbar.remove()
-                del self.colorbar
                 self.wtc_mesh.remove()
-                del self.wtc_mesh
                 self.contour_regions.remove()
                 del self.contour_regions
+                del self.colorbar
+                del self.wtc_mesh
   
             # get current frame index from slider
             current_frame = int(slider.val)
             self.update_figure(current_frame)
             
-        self.check.on_clicked(check_callback)
+        def parent_check_callback(label):
+            # ensures that only one joint is selected at a time
+            for joint in DESIRED_JOINT_NAMES:
+                if joint != label and self.parent_check.get_status()[DESIRED_JOINT_NAMES.index(joint)]:
+                   self.parent_check.set_active(DESIRED_JOINT_NAMES.index(joint))
+                   
+            # update current joint
+            self.parent_selected_joint = label 
+            
+            if hasattr(self, 'wtc_mesh'):
+                self.colorbar.remove()
+                self.wtc_mesh.remove()
+                self.contour_regions.remove()
+                self.coi_fill.remove()
+                del self.contour_regions
+                del self.colorbar
+                del self.wtc_mesh
+                del self.coi_fill
+                
+            # get current frame index from slider
+            current_frame = int(slider.val)
+            self.update_figure(current_frame)
+            
+        self.infant_check.on_clicked(infant_check_callback)
+        self.parent_check.on_clicked(parent_check_callback)
 
     def initialize_video(self, joint_name:str, frame_number:int = 0):
         # plots first frame with joints
@@ -295,7 +323,6 @@ class MultiDataSyncFigure:
         valid = ~np.isnan(coi_masked)
         if valid.any() and not hasattr(self, 'coi_filled'):
             self.coi_fill =  self.ax[ax_number].fill_between(wtc_timestamps[valid], coi_masked[valid], freq.min(), alpha=0.2, color='gray', hatch='x')
-            
             
     def update_figure(self, val:int):
         # for video quality 

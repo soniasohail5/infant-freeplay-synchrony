@@ -137,7 +137,7 @@ def make_ids_consistent(dyad_info):
     return dyad_info
 
 # Directory
-folder_dir = "/mnt/c/3HYPER FREEPLAY DV METRABS/labelling 4132026"
+folder_dir = "/mnt/c/3HYPER FREEPLAY DV METRABS/labelling 772026"
 new_folder_dir = "/mnt/c/3HYPER FREEPLAY DV METRABS/Processed Data 2"
 
 for folder in sorted(os.listdir(folder_dir)):

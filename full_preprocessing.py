@@ -54,7 +54,7 @@ def plot_original_vs_preprocessed_signals(infant_original_data, parent_original_
 
 def main():
 
-    for file in os.listdir(keypoints_dir):
+    for file in os.listdir(keypoints_dir)[-2:]:
         keypoint_path = os.path.join(keypoints_dir, file)
         dyad_number = get_dyad_number(file)
         
@@ -95,11 +95,11 @@ def main():
                 infant_intermediate_keypoints[joint, coordinate, :] = movmad_filter(infant_interpolated_signal, 30)
                 parent_intermediate_keypoints[joint, coordinate, :] = movmad_filter(parent_interpolated_signal, 30)
                 
-                '''
+                
                 # Plot signal for verification
                 plot_original_vs_preprocessed_signals(infant_original_signal, parent_original_signal, infant_intermediate_keypoints[joint, coordinate, :], 
                                                       parent_intermediate_keypoints[joint, coordinate, :], dyad_number, joint, coordinate)
-                '''
+                
             # Normalize signal 
             print("Normalize signal using L2/Euclidean norm .....")
             infant_x, infant_y = infant_intermediate_keypoints[joint, 0, :], infant_intermediate_keypoints[joint, 1, :]
