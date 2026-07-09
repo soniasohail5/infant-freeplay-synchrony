@@ -25,13 +25,13 @@ keypoints_path = "/mnt/c/3HYPER FREEPLAY DV METRABs/MATLAB Keypoints 2/2D Keypoi
 # Class for figures with multiple subplots that require synchronization (ie. need to load simultaneously)
 class MultiDataSyncFigure:
     def __init__(self, num_rows:int, num_cols:int, dyad_number:int, video_path:str, movement_path:str, keypoints_path:str, 
-                 total_frames:int, x_label:list, y_label:list, titles:dict):
+                 total_frames:int, x_label:list, y_label:list, titles:dict, playback_speed):
         # video params
         self.video = VideoLoader(video_path)
         self.video._open_video()
         self.fps = self.video.fps
         self.frames = total_frames
-        self.playback_speed = self.video.fps
+        self.playback_speed = 1.0 if playback_speed is None else playback_speed
         self.is_playing = False
         
         # data params
@@ -50,7 +50,6 @@ class MultiDataSyncFigure:
         self.x_lim = self.video.width
         self.y_lim = self.video.height
         self.timestamps = np.arange(self.frames)/self.fps
-        self.current_joint = DESIRED_JOINT_NAMES[0]
         self.infant_selected_joint = DESIRED_JOINT_NAMES[0]
         self.parent_selected_joint = DESIRED_JOINT_NAMES[0]
         
@@ -62,7 +61,7 @@ class MultiDataSyncFigure:
         
     def advance_frame(self):
         current_frame = int(self.slider.val)
-        next_frame = current_frame + max(2 * self.video.fps, int(self.playback_speed))
+        next_frame = current_frame + min(int(2 * self.video.fps), self.playback_speed)
         
         if next_frame >= self.frames:
             self.is_playing = False
@@ -74,7 +73,7 @@ class MultiDataSyncFigure:
     def update_time_text(self):
         current_frame = int(self.slider.val)
         current_time = current_frame/self.fps
-        self.time_text.set_text(f'Time:{current_time:.2f}s | Speed: {self.playback_speed/self.video.fps:.4}x')
+        self.time_text.set_text(f'Time:{current_time:.2f}s | FPS: {self.playback_speed}')
      
     def get_wtc(self):
         dt = 1/self.fps 
@@ -123,7 +122,7 @@ class MultiDataSyncFigure:
                         valinit=0, valstep=1)
             
         # time display
-        time_text = self.fig.text(0.5, 0.05, f'Time: 0.00s | Speed: {self.playback_speed/self.video.fps:.4}x',
+        time_text = self.fig.text(0.5, 0.05, f'Time: 0.00s | FPS: {self.playback_speed}',
                              ha='center', fontsize=12)
         self.time_text = time_text
         
@@ -175,7 +174,7 @@ class MultiDataSyncFigure:
             self.update_time_text()
             
         def btn_speed_up_callback(event):
-            self.playback_speed = min(16.5, self.playback_speed + 0.25)
+            self.playback_speed = min(self.video.fps, self.playback_speed + 0.25)
             self.update_time_text()
             
         self.btn_play.on_clicked(btn_play_callback)
@@ -191,8 +190,8 @@ class MultiDataSyncFigure:
         slider.on_changed(self.update_figure)
             
         # checkboxes for joints
-        infant_check_ax = plt.axes([0.75, 0.73, 0.15, 0.15])
-        parent_check_ax = plt.axes([0.25, 0.45, 0.15, 0.15])
+        infant_check_ax = plt.axes([0.75, 0.575, 0.15, 0.15])
+        parent_check_ax = plt.axes([0.125, 0.575, 0.15, 0.15])
         self.infant_check = CheckButtons(infant_check_ax, DESIRED_JOINT_NAMES)
         self.parent_check = CheckButtons(parent_check_ax, DESIRED_JOINT_NAMES)
         
@@ -245,9 +244,15 @@ class MultiDataSyncFigure:
         self.infant_check.on_clicked(infant_check_callback)
         self.parent_check.on_clicked(parent_check_callback)
 
-    def initialize_video(self, joint_name:str, frame_number:int = 0):
+    def initialize_video(self, joint_name: list[str] | str, frame_number:int = 0):
         # plots first frame with joints
-        self.current_joint = joint_name
+        if isinstance(joint_name, list):
+            self.infant_selected_joint = joint_name[0]
+            self.parent_selected_joint = joint_name[1]
+        else:
+            self.infant_selected_joint = joint_name
+            self.parent_selected_joint = joint_name
+            
         self.get_wtc()  # needed before plot_wtc can access self.all_wtc_data
         self.draw_video_bg(ax_number=0, frame_number=frame_number)
         self.plot_joints(ax_number=0, frame_number=frame_number)
@@ -344,8 +349,8 @@ class MultiDataSyncFigure:
             del self.phase_arrows
             
         sig_mask = wtc > sig_clean[:, np.newaxis]
-        t_skip = 50
-        p_skip = 2
+        t_skip = 80
+        p_skip = 7
         
         if frame_number > 1:
             if frame_number % t_skip == 0 or not hasattr(self, 'phase_arrows'):
@@ -396,11 +401,12 @@ def main():
         total_frames=6607,
         x_label=["Time (s)", "Time (s)"],
         y_label=["", "Frequency (Hz)"],
-        titles=titles
+        titles=titles,
+        playback_speed=4.0
     )
     
     fig_obj.set_axes()
-    fig_obj.initialize_video(joint_name=DESIRED_JOINT_NAMES[0])
+    fig_obj.initialize_video(joint_name=["Head", "Neck"])
     plt.show()
 
 if __name__ == "__main__":
