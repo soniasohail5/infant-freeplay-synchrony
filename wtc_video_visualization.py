@@ -73,7 +73,7 @@ class MultiDataSyncFigure:
     def update_time_text(self):
         current_frame = int(self.slider.val)
         current_time = current_frame/self.fps
-        self.time_text.set_text(f'Time:{current_time:.2f}s | FPS: {self.playback_speed}')
+        self.time_text.set_text(f'Time:{current_time:.2f}s | FPS: {self.playback_speed}{self.playback_speed/self.video.fps:.4}x')
      
     def get_wtc(self):
         dt = 1/self.fps 
@@ -90,10 +90,10 @@ class MultiDataSyncFigure:
                 else:
                     joint_pair_str = infant_joint + ", " + parent_joint
                     
-                wtc, a_wct, coi, freq, sig  = compute_wtc(self.dyad_info, joint_pair, s0, dt)
-                wtc_data = {"WTC": wtc, "Phase Angles": a_wct, "COI": coi, 
-                            "Frequency": freq, "Significance": sig}
-                self.all_wtc_data[joint_pair_str] = wtc_data
+            wtc, a_wct, coi, freq, sig  = compute_wtc(self.dyad_info, joint_pair, s0, dt)
+            wtc_data = {"WTC": wtc, "Phase Angles": a_wct, "COI": coi, 
+                         "Frequency": freq, "Significance": sig}
+            self.all_wtc_data[joint_pair_str] = wtc_data
             
     def set_axes(self):
         # places the titles, axes, and buttons for each plot 
@@ -203,7 +203,7 @@ class MultiDataSyncFigure:
                    
             # update current joint
             self.infant_selected_joint = label 
-            
+        
             if hasattr(self, 'wtc_mesh'):
                 self.colorbar.remove()
                 self.wtc_mesh.remove()
@@ -243,16 +243,17 @@ class MultiDataSyncFigure:
             
         self.infant_check.on_clicked(infant_check_callback)
         self.parent_check.on_clicked(parent_check_callback)
-
-    def initialize_video(self, joint_name: list[str] | str, frame_number:int = 0):
+            
+            
+    def initialize_video(self, joint_name:str, frame_number:int = 0):
         # plots first frame with joints
+        
         if isinstance(joint_name, list):
             self.infant_selected_joint = joint_name[0]
             self.parent_selected_joint = joint_name[1]
         else:
             self.infant_selected_joint = joint_name
-            self.parent_selected_joint = joint_name
-            
+            self.parent_selected_joint = joint_nament = joint_name
         self.get_wtc()  # needed before plot_wtc can access self.all_wtc_data
         self.draw_video_bg(ax_number=0, frame_number=frame_number)
         self.plot_joints(ax_number=0, frame_number=frame_number)
@@ -273,7 +274,7 @@ class MultiDataSyncFigure:
         if self.video:
             video_frame = self.video.get_frame(frame_number)
             if video_frame is not None:
-                video_frame = cv2.resize(video_frame, (640, 360)) # downsample before caching
+                video_frame = cv2.resize(video_frame, (640, 360)) 
                 if not hasattr(self, 'video_im'):
                     extent = [0, self.video.width, self.video.height, 0]
                     self.video_im = self.ax[ax_number].imshow(video_frame, extent=extent, aspect='auto', zorder=0)
@@ -300,13 +301,13 @@ class MultiDataSyncFigure:
             joint_pair = self.infant_selected_joint
         else:
             joint_pair = self.infant_selected_joint + ", " + self.parent_selected_joint
-            
+        
         wtc_data = self.all_wtc_data[joint_pair]
         wtc = wtc_data["WTC"]
         freq = wtc_data["Frequency"]
         sig = wtc_data["Significance"]
-        coi = wtc_data["COI"]
         phase_angles = wtc_data["Phase Angles"]
+        coi = wtc_data["COI"]
         period = 1/freq
         
         n_freq, n_time = wtc.shape
@@ -340,8 +341,7 @@ class MultiDataSyncFigure:
         else:
             self.wtc_mesh.set_array(wtc_masked.ravel())
             
-        valid = ~np.isnan(coi_masked)
-
+        valid = ~np.isnan(coi_masked) 
         if hasattr(self, 'coi_fill'):
             try:
                 self.coi_fill.remove()
@@ -374,7 +374,7 @@ class MultiDataSyncFigure:
                 if mask.any():
                     self.phase_arrows = self.ax[ax_number].quiver(t_grid[mask], p_grid[mask], u[mask], v[mask],
                                                                   units='width', pivot='mid', headwidth=3, width=0.002, scale=50, color='black', zorder=6)
-
+            
     def update_figure(self, val:int):
         # for video quality 
         frame_number = int(val)
