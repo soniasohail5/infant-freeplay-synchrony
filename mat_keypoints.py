@@ -50,13 +50,13 @@ for folder in sorted(os.listdir(folder_dir))[-2:]:
         person_2_sequence.append(frame_keypoints[2])
         
     person_0 = np.array(person_0_sequence)
-    # person_0 = np.transpose(person_0, (1, 2, 0))
+    person_0 = np.transpose(person_0, (1, 2, 0))
     
     person_1 = np.array(person_1_sequence)
-    # person_1 = np.transpose(person_1, (1, 2, 0))
+    person_1 = np.transpose(person_1, (1, 2, 0))
     
     person_2 = np.array(person_2_sequence)
-    # person_2 = np.transpose(person_2, (1, 2, 0))
+    person_2 = np.transpose(person_2, (1, 2, 0))
     
     new_dict_2d = {"person_0_2d": person_0, "person_1_2d": person_1, "person_2_2d": person_2}
     new_file_name_2d = folder + ' 2D Keypoints.mat'

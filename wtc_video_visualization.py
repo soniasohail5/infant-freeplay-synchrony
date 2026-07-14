@@ -272,8 +272,8 @@ class MultiDataSyncFigure:
             
         if self.video:
             video_frame = self.video.get_frame(frame_number)
-            video_frame = cv2.resize(video_frame, (640, 360)) # downsample before caching
             if video_frame is not None:
+                video_frame = cv2.resize(video_frame, (640, 360)) # downsample before caching
                 if not hasattr(self, 'video_im'):
                     extent = [0, self.video.width, self.video.height, 0]
                     self.video_im = self.ax[ax_number].imshow(video_frame, extent=extent, aspect='auto', zorder=0)
@@ -341,9 +341,18 @@ class MultiDataSyncFigure:
             self.wtc_mesh.set_array(wtc_masked.ravel())
             
         valid = ~np.isnan(coi_masked)
-        if valid.any() and not hasattr(self, 'coi_filled'):
-            self.coi_fill =  self.ax[ax_number].fill_between(wtc_timestamps[valid], coi_masked[valid], freq.min(), alpha=0.2, color='gray', hatch='x')
+
+        if hasattr(self, 'coi_fill'):
+            try:
+                self.coi_fill.remove()
+            except ValueError:
+                pass
+            del self.coi_fill
             
+        if valid.any():
+            self.coi_fill = self.ax[ax_number].fill_between( wtc_timestamps[valid], coi_masked[valid], freq.min(),
+            alpha=0.6, color='gray', hatch='x')
+                
         if hasattr(self, 'phase_arrows'):
             self.phase_arrows.remove()
             del self.phase_arrows
@@ -377,7 +386,7 @@ class MultiDataSyncFigure:
         self.ax[0].draw_artist(self.infant_scatter) # redraw only video
         self.ax[0].draw_artist(self.parent_scatter) # redraw only scatter
         self.fig.canvas.blit(self.ax[0].bbox) 
-        self.fig.canvas.draw_idle()
+        self.fig.canvas.blit(self.ax[1].bbox)
         self.fig.canvas.flush_events()
         
     def clear_figure(self):
@@ -406,7 +415,7 @@ def main():
     )
     
     fig_obj.set_axes()
-    fig_obj.initialize_video(joint_name=["Head", "Neck"])
+    fig_obj.initialize_video(joint_name=["Neck", "Neck"])
     plt.show()
 
 if __name__ == "__main__":
