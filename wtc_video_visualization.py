@@ -1,7 +1,6 @@
 import os
 import cv2
 import numpy as np
-import scipy.io as sio
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -388,6 +387,9 @@ class MultiDataSyncFigure:
         self.fig.canvas.blit(self.ax[0].bbox) 
         self.fig.canvas.blit(self.ax[1].bbox)
         self.fig.canvas.flush_events()
+        
+        if frame_number == self.frames:
+            self.clear_figure()
         
     def clear_figure(self):
         # free up memory after video is finished playing or is interrupted
