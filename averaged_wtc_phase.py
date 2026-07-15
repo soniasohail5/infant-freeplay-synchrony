@@ -33,6 +33,7 @@ def calculate_average_joint_movement(joint_data, selected_joint_names):
     return average_joint_movement
 
 def plot_average_wtc_phase(avg_wtc_windows, avg_phase_windows, window_size_seconds, overlap_seconds):
+    # add legend for head and shoulder joints
     num_windows = avg_wtc_windows.shape[0]
     time_axis = np.arange(num_windows) * (window_size_seconds - overlap_seconds)
     
