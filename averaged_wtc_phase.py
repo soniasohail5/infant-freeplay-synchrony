@@ -32,10 +32,35 @@ def calculate_average_joint_movement(joint_data, selected_joint_names):
     average_joint_movement = np.mean(selected_joint_data, axis=1)
     return average_joint_movement
 
+def plot_average_wtc_phase(avg_wtc_windows, avg_phase_windows, window_size_seconds, overlap_seconds):
+    num_windows = avg_wtc_windows.shape[0]
+    time_axis = np.arange(num_windows) * (window_size_seconds - overlap_seconds)
+    
+    plt.figure(figsize=(12, 6))
+    
+    plt.subplot(2, 1, 1)
+    plt.plot(time_axis, avg_wtc_windows, label='Average WTC', color='blue')
+    plt.title('Average Wavelet Coherence (WTC) Across Windows')
+    plt.xlabel('Time (s)')
+    plt.ylabel('WTC')
+    plt.grid()
+    
+    plt.subplot(2, 1, 2)
+    plt.plot(time_axis, avg_phase_windows, label='Average Phase Angle', color='orange')
+    plt.title('Average Phase Angle Across Windows')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Phase Angle (radians)')
+    plt.grid()
+    
+    plt.tight_layout()
+    plt.show()
+
 def main():
     # Load movement data 
     dyad_info = load_data_mat(JOINT_MOVEMENT_PATH)
     frame_rate = 27.49 # taken from database, but needs to be adjusted for every sample
+    dt = 1/frame_rate # period of the signal (s)
+    s0 = 2 * dt  # smallest scale of the wavelet transform
     
     # Convert window size and overlap from seconds to frames
     window_size_frames = convert_seconds_to_frame(WINDOW_SIZE_SECONDS, frame_rate)
@@ -47,8 +72,25 @@ def main():
     # Create sliding windows for the average joint movement
     windows = make_sliding_windows(average_joint_movement, window_size_frames, overlap_frames)
     
-    # Compute wavelet coherence and phase angles for entire signal, average across FOI, then average across windows
-    head_wtc_signal, head_phase_signal, head_coi, head_freqs, hsig = compute_wtc(dyad_info, SELECTED_JOINT_NAMES[0]) # head vs shoulders
+    # Add averaged joint movement back to dyad_info for further analysis
     
-
-
+    # Compute wavelet coherence and phase angles for entire signal, average across FOI, then average across windows
+    #  WTC and phase angles for the head and shoulders
+    head_wtc_signal, head_phase_signal, head_coi, head_freqs, hsig = compute_wtc(dyad_info, SELECTED_JOINT_NAMES[0]) 
+    # shoulder_wtc_signal, shoulder_phase_signal, shoulder_coi, shoulder_freqs, ssig = compute_wtc(dyad_info, 'Shoulders Averaged') 
+    
+    # Extract data from FOI and compute the average
+    foi_indices = np.where((head_freqs >= 0.5) & (head_freqs <= 2))[0]
+    head_wtc_foi = head_wtc_signal[foi_indices, :]
+    head_phase_foi = head_phase_signal[foi_indices, :]
+    
+    avg_head_wtc = np.mean(head_wtc_foi, axis=0)
+    avg_head_phase = np.mean(head_phase_foi, axis=0)
+    
+    # Average the WTC and phase angles across the sliding windows
+    avg_head_wtc_windows = np.mean(make_sliding_windows(avg_head_wtc[np.newaxis, :], window_size_frames, overlap_frames), axis=1)
+    avg_head_phase_windows = np.mean(make_sliding_windows(avg_head_phase[np.newaxis, :], window_size_frames, overlap_frames), axis=1)
+    
+    # Plot the averaged WTC and phase angles across windows
+    plot_average_wtc_phase(avg_head_wtc_windows, avg_head_phase_windows, WINDOW_SIZE_SECONDS, WINDOW_OVERLAP_SECONDS)
+    
