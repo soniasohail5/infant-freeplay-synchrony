@@ -1,15 +1,20 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import circmean
 from single_dyad_wtc_analysis import load_data_mat, compute_wtc, DESIRED_JOINT_NAMES
 from numpy.lib.stride_tricks import sliding_window_view
 
 '''
 Windowed averaging of wavelet coherence and phase angles computed from head and shoulder keypoint data for a dyad within a specific frequency band.
 
-FOI: 0.5-2Hz (similar to the range mentioned in the 2022 Fujiwara et al. paper)
+FOI: 0.5-2Hz (similar to the range mentioned in the 2022 Fujiwara et. al paper)
 Window size: 10s + 2s overlap
 Specified keypoints: Head, L/R shoulders (averaged)
+
+7/16/2026 Note: To determine the dominant phase relationship within the dyad, phase angles will be binned into 4 groups ranging within 45 degrees each (in-phase, anti-phase, infant-led, parent-led)
+A histogram will be plotted to determine the most frequent phase relationship
+Average phase angles will be calculated using circular mean to avoid standard arithmetic
 
 '''
 WINDOW_SIZE_SECONDS = 10 
@@ -60,6 +65,7 @@ def main():
     # Load movement data 
     dyad_info = load_data_mat(JOINT_MOVEMENT_PATH)
     frame_rate = 27.49 # taken from database, but needs to be adjusted for every sample
+    max_frames = len(dyad_info["Parent"]["Head"])
     dt = 1/frame_rate # period of the signal (s)
     s0 = 2 * dt  # smallest scale of the wavelet transform
     
@@ -67,31 +73,42 @@ def main():
     window_size_frames = convert_seconds_to_frame(WINDOW_SIZE_SECONDS, frame_rate)
     overlap_frames = convert_seconds_to_frame(WINDOW_OVERLAP_SECONDS, frame_rate)
     
-    # Calculate average joint movement for selected joints
-    average_joint_movement = calculate_average_joint_movement(dyad_info['joint_data'], SELECTED_JOINT_NAMES[1:]) # exclude head 
-    
-    # Create sliding windows for the average joint movement
-    windows = make_sliding_windows(average_joint_movement, window_size_frames, overlap_frames)
-    
-    # Add averaged joint movement back to dyad_info for further analysis
+    # Calculate average joint movement for selected joints and add them back to dyad_info 
+    dyad_info["Infant"]["Shoulders Averaged"] = calculate_average_joint_movement(dyad_info["Infant"], SELECTED_JOINT_NAMES[1:]) 
+    dyad_info["Parent"]["Shoulders Averaged"] = calculate_average_joint_movement(dyad_info["Parent"], SELECTED_JOINT_NAMES[1:])
     
     # Compute wavelet coherence and phase angles for entire signal, average across FOI, then average across windows
     #  WTC and phase angles for the head and shoulders
     head_wtc_signal, head_phase_signal, head_coi, head_freqs, hsig = compute_wtc(dyad_info, SELECTED_JOINT_NAMES[0]) 
-    # shoulder_wtc_signal, shoulder_phase_signal, shoulder_coi, shoulder_freqs, ssig = compute_wtc(dyad_info, 'Shoulders Averaged') 
+    shoulder_wtc_signal, shoulder_phase_signal, shoulder_coi, shoulder_freqs, ssig = compute_wtc(dyad_info, "Shoulders Averaged") 
     
-    # Extract data from FOI and compute the average
+    # Extract data from FOI 
     foi_indices = np.where((head_freqs >= 0.5) & (head_freqs <= 2))[0]
     head_wtc_foi = head_wtc_signal[foi_indices, :]
     head_phase_foi = head_phase_signal[foi_indices, :]
+    shoulder_wtc_foi = shoulder_wtc_signal[foi_indices, :]
+    shoulder_phase_foi = shoulder_phase_signal[foi_indices, :]
     
-    avg_head_wtc = np.mean(head_wtc_foi, axis=0)
-    avg_head_phase = np.mean(head_phase_foi, axis=0)
+    # Bin phase values to determine dominant phase relationship
+    phase_labels = ["In-Phase", "Anti-Phase", "Infant-Leading", "Parent-Leading"]
+    head_phase_foi_dg, shoulder_phase_foi_dg = np.degrees(head_phase_foi) % 360, np.degrees(shoulder_phase_foi) % 360
+    
+    head_phase_binned = {}
+    shoulder_phase_binned = {} 
+    
+    head_in_phase = np.sum((head_phase_foi_dg <= 45) | (head_phase_foi_dg > 315))
+    head_parent_lead = np.sum((head_phase_foi_dg > 45) | (head_phase_foi_dg <= 135))
+    head_infant_lead = np.sum((head_phase_foi_dg > 135) | (head_phase_foi_dg <= 225))
+    head_parent_lead = np.sum((head_phase_foi_dg > 225) | (head_phase_foi_dg <= 315)) 
     
     # Average the WTC and phase angles across the sliding windows
-    avg_head_wtc_windows = np.mean(make_sliding_windows(avg_head_wtc[np.newaxis, :], window_size_frames, overlap_frames), axis=1)
-    avg_head_phase_windows = np.mean(make_sliding_windows(avg_head_phase[np.newaxis, :], window_size_frames, overlap_frames), axis=1)
+    avg_head_wtc_windowed = np.mean(make_sliding_windows(head_wtc_foi, window_size_frames, overlap_frames), axis=1)
+    avg_shoulder_wtc_windowed = np.mean(make_sliding_windows(shoulder_wtc_foi, window_size_frames, overlap_frames), axis=1)
+    avg_head_phase_windowed = circmean(make_sliding_windows(head_phase_foi, window_size_frames, overlap_frames))
+    avg_shoulder_phase_windowed = circmean(make_sliding_windows(shoulder_phase_foi, window_size_frames, overlap_frames))
     
     # Plot the averaged WTC and phase angles across windows
-    plot_average_wtc_phase(avg_head_wtc_windows, avg_head_phase_windows, WINDOW_SIZE_SECONDS, WINDOW_OVERLAP_SECONDS)
     
+
+
+
