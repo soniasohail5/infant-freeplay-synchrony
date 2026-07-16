@@ -45,7 +45,7 @@ def plot_average_wtc_phase(avg_wtc_windows, avg_phase_windows, window_size_secon
     plt.suptitle('Average WTC and Phase Angle Across Windows')
     plt.subplot(2, 1, 1)
     for (joint, wtc_line) in avg_wtc_windows.items():
-        plt.plot(time_axis, wtc_line, color='lightblue', label=joint, alpha=0.5)
+        plt.plot(time_axis, wtc_line, color='lightblue', label=joint, alpha=0.9)
     plt.title('Average Wavelet Coherence (WTC) Across Windows')
     plt.xlabel('Time (s)')
     plt.ylabel('WTC')
@@ -54,7 +54,7 @@ def plot_average_wtc_phase(avg_wtc_windows, avg_phase_windows, window_size_secon
     
     plt.subplot(2, 1, 2)
     for (joint, phase_line) in avg_phase_windows.items():
-        plt.plot(time_axis, phase_line, color='orange', label=joint, alpha=0.5)
+        plt.plot(time_axis, phase_line, color='orange', label=joint, alpha=0.9)
     plt.title('Average Phase Angle Across Windows')
     plt.xlabel('Time (s)')
     plt.ylabel('Phase Angle (radians)')
