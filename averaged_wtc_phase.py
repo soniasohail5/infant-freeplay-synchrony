@@ -27,14 +27,13 @@ def convert_seconds_to_frame(seconds, frame_rate):
 
 def make_sliding_windows(data, window_size_frames, overlap):
     step = window_size_frames - overlap
-    num_windows = (data.shape[1] - window_size_frames) // step + 1
-    windows = sliding_window_view(data, window_shape=(window_size_frames, data.shape[1]))[::step]
+    num_windows = (data.shape[0] - window_size_frames) // step + 1
+    windows = sliding_window_view(data, window_shape=window_size_frames)[::step]
     return windows[:num_windows]
 
 def calculate_average_joint_movement(joint_data, selected_joint_names):
-    joint_indices = [DESIRED_JOINT_NAMES.index(name) for name in selected_joint_names]
-    selected_joint_data = joint_data[:, joint_indices, :]
-    average_joint_movement = np.mean(selected_joint_data, axis=1)
+    selected_joint_data = np.array([joint_data[name] for name in selected_joint_names])
+    average_joint_movement = np.mean(selected_joint_data, axis=0)
     return average_joint_movement
 
 def plot_average_wtc_phase(avg_wtc_windows, avg_phase_windows, window_size_seconds, overlap_seconds):
@@ -65,7 +64,7 @@ def main():
     # Load movement data 
     dyad_info = load_data_mat(JOINT_MOVEMENT_PATH)
     frame_rate = 27.49 # taken from database, but needs to be adjusted for every sample
-    max_frames = len(dyad_info["Parent"]["Head"])
+    max_frames = max(len(dyad_info["Parent"]["Head"]), len(dyad_info["Infant"]["Head"]))
     dt = 1/frame_rate # period of the signal (s)
     s0 = 2 * dt  # smallest scale of the wavelet transform
     
@@ -79,8 +78,8 @@ def main():
     
     # Compute wavelet coherence and phase angles for entire signal, average across FOI, then average across windows
     #  WTC and phase angles for the head and shoulders
-    head_wtc_signal, head_phase_signal, head_coi, head_freqs, hsig = compute_wtc(dyad_info, SELECTED_JOINT_NAMES[0]) 
-    shoulder_wtc_signal, shoulder_phase_signal, shoulder_coi, shoulder_freqs, ssig = compute_wtc(dyad_info, "Shoulders Averaged") 
+    head_wtc_signal, head_phase_signal, head_coi, head_freqs, hsig = compute_wtc(dyad_info, SELECTED_JOINT_NAMES[0], s0, dt) 
+    shoulder_wtc_signal, shoulder_phase_signal, shoulder_coi, shoulder_freqs, ssig = compute_wtc(dyad_info, "Shoulders Averaged", s0, dt) 
     
     # Extract data from FOI 
     foi_indices = np.where((head_freqs >= 0.5) & (head_freqs <= 2))[0]
@@ -89,25 +88,42 @@ def main():
     shoulder_wtc_foi = shoulder_wtc_signal[foi_indices, :]
     shoulder_phase_foi = shoulder_phase_signal[foi_indices, :]
     
-    # Bin phase values to determine dominant phase relationship
-    phase_labels = ["In-Phase", "Anti-Phase", "Infant-Leading", "Parent-Leading"]
-    head_phase_foi_dg, shoulder_phase_foi_dg = np.degrees(head_phase_foi) % 360, np.degrees(shoulder_phase_foi) % 360
-    
-    head_phase_binned = {}
-    shoulder_phase_binned = {} 
-    
-    head_in_phase = np.sum((head_phase_foi_dg <= 45) | (head_phase_foi_dg > 315))
-    head_parent_lead = np.sum((head_phase_foi_dg > 45) | (head_phase_foi_dg <= 135))
-    head_infant_lead = np.sum((head_phase_foi_dg > 135) | (head_phase_foi_dg <= 225))
-    head_parent_lead = np.sum((head_phase_foi_dg > 225) | (head_phase_foi_dg <= 315)) 
+   # Average the WTC and phase angles across the frequency of interest (FOI) before windowing
+    avg_head_wtc_foi = np.mean(head_wtc_foi, axis=0)
+    avg_head_phase_foi = circmean(head_phase_foi, axis=0)
+    avg_shoulder_wtc_foi = np.mean(shoulder_wtc_foi, axis=0)
+    avg_shoulder_phase_foi = circmean(shoulder_phase_foi, axis=0)
     
     # Average the WTC and phase angles across the sliding windows
-    avg_head_wtc_windowed = np.mean(make_sliding_windows(head_wtc_foi, window_size_frames, overlap_frames), axis=1)
-    avg_shoulder_wtc_windowed = np.mean(make_sliding_windows(shoulder_wtc_foi, window_size_frames, overlap_frames), axis=1)
-    avg_head_phase_windowed = circmean(make_sliding_windows(head_phase_foi, window_size_frames, overlap_frames))
-    avg_shoulder_phase_windowed = circmean(make_sliding_windows(shoulder_phase_foi, window_size_frames, overlap_frames))
+    avg_head_wtc_windowed = np.mean(make_sliding_windows(avg_head_wtc_foi, window_size_frames, overlap_frames), axis=1)
+    avg_shoulder_wtc_windowed = np.mean(make_sliding_windows(avg_shoulder_wtc_foi, window_size_frames, overlap_frames), axis=1)
+    avg_head_phase_windowed = circmean(make_sliding_windows(avg_head_phase_foi, window_size_frames, overlap_frames))
+    avg_shoulder_phase_windowed = circmean(make_sliding_windows(avg_shoulder_phase_foi, window_size_frames, overlap_frames))
+    
+    # Bin phase values to determine dominant phase relationship
+    phase_labels = ["In-Phase", "Parent-Lead", "Anti-Phase", "Infant-Lead"]
+    head_phase_dg, shoulder_phase_dg = np.degrees(avg_head_phase_windowed) % 360, np.degrees(avg_shoulder_phase_windowed) % 360
+        
+    head_phase_binned = []
+    shoulder_phase_binned = []
+    
+    head_in_phase = np.sum((avg_head_phase_windowed <= 45) | (avg_head_phase_windowed > 315))
+    head_parent_lead = np.sum((avg_head_phase_windowed > 45) & (avg_head_phase_windowed <= 135))
+    head_anti_phase = np.sum((avg_head_phase_windowed > 135) & (avg_head_phase_windowed <= 225))
+    head_infant_lead = np.sum((avg_head_phase_windowed > 225) & (avg_head_phase_windowed <= 315)) 
+    head_phase_binned.extend([head_in_phase, head_parent_lead, head_anti_phase, head_infant_lead])
+    
+    shoulder_in_phase = np.sum((avg_shoulder_phase_windowed <= 45) | (avg_shoulder_phase_windowed > 315))
+    shoulder_parent_lead = np.sum((avg_shoulder_phase_windowed > 45) & (avg_shoulder_phase_windowed < 135))
+    shoulder_anti_phase = np.sum((avg_shoulder_phase_windowed >= 135) & (avg_shoulder_phase_windowed < 225))
+    shoulder_infant_lead = np.sum((avg_shoulder_phase_windowed >= 225) & (avg_shoulder_phase_windowed < 315))
+    shoulder_phase_binned.extend([shoulder_in_phase, shoulder_parent_lead, shoulder_anti_phase, shoulder_infant_lead])
     
     # Plot the averaged WTC and phase angles across windows
+    
+    
+if __name__ == "__main__":
+    main()
     
 
 
