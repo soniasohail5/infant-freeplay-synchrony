@@ -38,27 +38,46 @@ def calculate_average_joint_movement(joint_data, selected_joint_names):
 
 def plot_average_wtc_phase(avg_wtc_windows, avg_phase_windows, window_size_seconds, overlap_seconds):
     # add legend for head and shoulder joints
-    num_windows = avg_wtc_windows.shape[0]
+    num_windows = avg_wtc_windows["Head"].shape[0]
     time_axis = np.arange(num_windows) * (window_size_seconds - overlap_seconds)
     
     plt.figure(figsize=(12, 6))
-    
+    plt.suptitle('Average WTC and Phase Angle Across Windows')
     plt.subplot(2, 1, 1)
-    plt.plot(time_axis, avg_wtc_windows, label='Average WTC', color='blue')
+    for (joint, wtc_line) in avg_wtc_windows.items():
+        plt.plot(time_axis, wtc_line, color='lightblue', label=joint, alpha=0.5)
     plt.title('Average Wavelet Coherence (WTC) Across Windows')
     plt.xlabel('Time (s)')
     plt.ylabel('WTC')
     plt.grid()
+    plt.legend()
     
     plt.subplot(2, 1, 2)
-    plt.plot(time_axis, avg_phase_windows, label='Average Phase Angle', color='orange')
+    for (joint, phase_line) in avg_phase_windows.items():
+        plt.plot(time_axis, phase_line, color='orange', label=joint, alpha=0.5)
     plt.title('Average Phase Angle Across Windows')
     plt.xlabel('Time (s)')
     plt.ylabel('Phase Angle (radians)')
     plt.grid()
+    plt.legend()
     
     plt.tight_layout()
     plt.show()
+    # plt.savefig("average_wtc_phase.png")
+    
+def plot_phase_binned(head_phase_binned, shoulder_phase_binned, phase_labels):
+    x = np.arange(len(phase_labels))
+    width = 0.35
+    
+    plt.figure(figsize=(10, 6))
+    plt.bar(x - width/2, head_phase_binned, width, label='Head')
+    plt.bar(x + width/2, shoulder_phase_binned, width, label='Shoulders')
+    plt.xticks(x, phase_labels)
+    plt.xlabel('Phase (degrees)')
+    plt.ylabel('Counts')
+    plt.title('Phase Binned Counts for Head and Shoulders')
+    plt.legend()
+    plt.savefig("phase_binned_counts.png")
 
 def main():
     # Load movement data 
@@ -97,31 +116,41 @@ def main():
     # Average the WTC and phase angles across the sliding windows
     avg_head_wtc_windowed = np.mean(make_sliding_windows(avg_head_wtc_foi, window_size_frames, overlap_frames), axis=1)
     avg_shoulder_wtc_windowed = np.mean(make_sliding_windows(avg_shoulder_wtc_foi, window_size_frames, overlap_frames), axis=1)
-    avg_head_phase_windowed = circmean(make_sliding_windows(avg_head_phase_foi, window_size_frames, overlap_frames))
-    avg_shoulder_phase_windowed = circmean(make_sliding_windows(avg_shoulder_phase_foi, window_size_frames, overlap_frames))
+    avg_head_phase_windowed = circmean(make_sliding_windows(avg_head_phase_foi, window_size_frames, overlap_frames), low=-np.pi, high=np.pi, axis=1)
+    avg_shoulder_phase_windowed = circmean(make_sliding_windows(avg_shoulder_phase_foi, window_size_frames, overlap_frames), low=-np.pi, high=np.pi, axis=1)
     
-    # Bin phase values to determine dominant phase relationship
+    avg_wtc_info = {
+        "Head": avg_head_wtc_windowed,
+        "Shoulder Average": avg_shoulder_wtc_windowed
+    }
+    
+    avg_phase_info = {
+        "Head": avg_head_phase_windowed,
+        "Shoulder Average": avg_shoulder_phase_windowed
+    }
+    # Bin phase values to determine dominant phase relationship within each window
     phase_labels = ["In-Phase", "Parent-Lead", "Anti-Phase", "Infant-Lead"]
     head_phase_dg, shoulder_phase_dg = np.degrees(avg_head_phase_windowed) % 360, np.degrees(avg_shoulder_phase_windowed) % 360
         
     head_phase_binned = []
     shoulder_phase_binned = []
     
-    head_in_phase = np.sum((avg_head_phase_windowed <= 45) | (avg_head_phase_windowed > 315))
-    head_parent_lead = np.sum((avg_head_phase_windowed > 45) & (avg_head_phase_windowed <= 135))
-    head_anti_phase = np.sum((avg_head_phase_windowed > 135) & (avg_head_phase_windowed <= 225))
-    head_infant_lead = np.sum((avg_head_phase_windowed > 225) & (avg_head_phase_windowed <= 315)) 
+    head_in_phase = np.sum((head_phase_dg <= 45) | (head_phase_dg > 315))
+    head_parent_lead = np.sum((head_phase_dg > 45) & (head_phase_dg <= 135))
+    head_anti_phase = np.sum((head_phase_dg > 135) & (head_phase_dg <= 225))
+    head_infant_lead = np.sum((head_phase_dg > 225) & (head_phase_dg <= 315)) 
     head_phase_binned.extend([head_in_phase, head_parent_lead, head_anti_phase, head_infant_lead])
     
-    shoulder_in_phase = np.sum((avg_shoulder_phase_windowed <= 45) | (avg_shoulder_phase_windowed > 315))
-    shoulder_parent_lead = np.sum((avg_shoulder_phase_windowed > 45) & (avg_shoulder_phase_windowed < 135))
-    shoulder_anti_phase = np.sum((avg_shoulder_phase_windowed >= 135) & (avg_shoulder_phase_windowed < 225))
-    shoulder_infant_lead = np.sum((avg_shoulder_phase_windowed >= 225) & (avg_shoulder_phase_windowed < 315))
+    shoulder_in_phase = np.sum((shoulder_phase_dg <= 45) | (shoulder_phase_dg > 315))
+    shoulder_parent_lead = np.sum((shoulder_phase_dg > 45) & (shoulder_phase_dg < 135))
+    shoulder_anti_phase = np.sum((shoulder_phase_dg >= 135) & (shoulder_phase_dg < 225))
+    shoulder_infant_lead = np.sum((shoulder_phase_dg >= 225) & (shoulder_phase_dg < 315))
     shoulder_phase_binned.extend([shoulder_in_phase, shoulder_parent_lead, shoulder_anti_phase, shoulder_infant_lead])
-    
+
     # Plot the averaged WTC and phase angles across windows
-    
-    
+    # plot_phase_binned(head_phase_binned, shoulder_phase_binned, phase_labels)
+    plot_average_wtc_phase(avg_wtc_info, avg_phase_info, WINDOW_SIZE_SECONDS, WINDOW_OVERLAP_SECONDS)
+
 if __name__ == "__main__":
     main()
     
