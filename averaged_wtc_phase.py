@@ -2,7 +2,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import circmean
-from single_dyad_wtc_analysis import load_data_mat, compute_wtc, DESIRED_JOINT_NAMES
+from single_dyad_wtc_analysis import load_data_mat, compute_wtc
 from numpy.lib.stride_tricks import sliding_window_view
 
 '''
@@ -20,6 +20,16 @@ Average phase angles will be calculated using circular mean to avoid errors with
 Rather than averaging shoulder movement and using it as input for WTC, the WTC from right and left shoulders will be computed separately 
 and then averaged to obtain the shoulder coherence. This is done to minimize the loss of phase information that occurs 
 when the shoulder movements are averaged prior to computing WTC.
+
+7/21/2026 Note: The question has shifted to determining which pair of shoulder joints yields significant changes in coherence within the dyad. 
+All possible shoulder combinations will be analyzed to determine which pair yields significant changes in coherence within the dyad.
+This will also be extended to the elbow keypoints to determine which pair of elbow joints yields significant changes in coherence within the dyad.
+
+Modifications:
+- Separate figures for averaged WTC and averaged phase angle for shoulders and joints
+    (4 figures, phase angle shoulders, phase angle elbows, WTC shoulders, WTC elbows)
+- Each figure will have its own subplot for the different joints (e.g., left shoulder, right shoulder) to visualize the 
+coherence and phase angle separately for each joint.
 
 '''
 WINDOW_SIZE_SECONDS = 10 
@@ -41,49 +51,27 @@ def calculate_average_joint_movement(joint_data, selected_joint_names):
     average_joint_movement = np.mean(selected_joint_data, axis=0)
     return average_joint_movement
 
-def plot_average_wtc_phase(avg_wtc_windows, avg_phase_windows, window_size_seconds, overlap_seconds):
+def plot_average_wtc(avg_wtc_windows: dict[str, np.ndarray], window_size_seconds: float, overlap_seconds: float, joint_name: str, joint_pairs: list[str], save_name: str):
     # add legend for head and shoulder joints
-    num_windows = avg_wtc_windows["Head"].shape[0]
+    num_windows = avg_wtc_windows[joint_name].shape[0]
     time_axis = np.arange(num_windows) * (window_size_seconds - overlap_seconds)
     coherence_axis = np.arange(0, 1, 0.1)
     phase_axis = np.arange(0, 360, 45)
     
-    plt.figure(figsize=(12, 12))
-    plt.suptitle('Windowed Average Wavelet Transform Coherence (WTC) and Phase Angle for Dyad #25')
-    plt.subplot(4, 1, 1)
-    plt.plot(time_axis, avg_wtc_windows["Head"], color='blue', alpha=0.9)
-    plt.title('Head WTC')
-    plt.xlabel('Time (s)')
-    plt.ylabel('WTC')
-    plt.yticks(coherence_axis)
-    plt.grid()
+    fig, ax = plt.subplots(4, 1, figsize=(12, 12))
+    plt.suptitle(f'Windowed Average Wavelet Transform Coherence (WTC) of {joint_name} Keypoint in Dyad #25')
     
-    plt.subplot(4, 1, 2)
-    plt.plot(time_axis, avg_wtc_windows["Shoulder Average"], color='orange', alpha=0.9)
-    plt.title('Shoulders WTC')
-    plt.xlabel('Time (s)')
-    plt.ylabel('WTC')
-    plt.yticks(coherence_axis)
-    plt.grid()
-
-    plt.subplot(4, 1, 3)
-    plt.plot(time_axis, avg_phase_windows["Head"], color='blue', alpha=0.9)
-    plt.title('Head Phase Angle')
-    plt.xlabel('Time (s)')
-    plt.ylabel('Angle (degrees)')
-    plt.yticks(phase_axis)
-    plt.grid()
-    
-    plt.subplot(4, 1, 4)
-    plt.plot(time_axis, avg_phase_windows["Shoulder Average"], color='orange', alpha=0.9)
-    plt.title('Shoulders Phase Angle')
-    plt.xlabel('Time (s)')
-    plt.ylabel('Angle (degrees)')
-    plt.yticks(phase_axis)
-    plt.grid()
+    for ax_idx, ax in enumerate(ax):
+        ax.plot(time_axis, avg_wtc_windows[joint_pairs[ax_idx]], color='blue', alpha=0.9)
+        ax.set_title(f'{joint_pairs[ax_idx]} WTC')
+        ax.set_xlabel('Time (s)')
+        ax.set_ylabel('Coherence')
+        ax.set_yticks(coherence_axis)
+        ax.grid()
     
     plt.tight_layout()
-    plt.savefig("average_wtc_phase_2.png")
+    plt.show()
+    # plt.savefig(save_name)
     
 def plot_phase_binned(head_phase_binned, shoulder_phase_binned, phase_labels):
     x = np.arange(len(phase_labels))
@@ -97,7 +85,7 @@ def plot_phase_binned(head_phase_binned, shoulder_phase_binned, phase_labels):
     plt.ylabel('Counts')
     plt.title('Phase Relationship Count for Head and Shoulders')
     plt.legend(loc='upper right')
-    plt.savefig("phase_binned_counts_2.png")
+    # plt.savefig("phase_binned_counts_2.png")
 
 def main():
     # Load movement data 
