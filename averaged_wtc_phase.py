@@ -2,6 +2,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import circmean
+from itertools import product
 from single_dyad_wtc_analysis import load_data_mat, compute_wtc
 from numpy.lib.stride_tricks import sliding_window_view
 
@@ -34,8 +35,10 @@ coherence and phase angle separately for each joint.
 '''
 WINDOW_SIZE_SECONDS = 10 
 WINDOW_OVERLAP_SECONDS = 2
-SELECTED_JOINT_NAMES = ['Head', 'Left Shoulder', 'Right Shoulder']
+SELECTED_JOINT_NAMES = ['Head', 'Left Shoulder', 'Right Shoulder', 'Left Elbow', 'Right Elbow']
 JOINT_MOVEMENT_PATH = "/mnt/c/3HYPER FREEPLAY DV METRABs/MATLAB Keypoints 2/2D Keypoints Processed/3HYPER.025 FREEPLAY DV PROCESSED 2D Keypoints.mat"
+SHOULDER_JOINT_PAIRS = list(product(SELECTED_JOINT_NAMES[1:3], repeat=2))
+ELBOW_JOINT_PAIRS = list(product(SELECTED_JOINT_NAMES[3:], repeat=2))
 
 def convert_seconds_to_frame(seconds, frame_rate):
     return int(seconds * frame_rate)
@@ -163,9 +166,7 @@ def main():
     # head_phase_bin_info = dict(zip(phase_labels, head_phase_binned))
     # shoulder_phase_bin_info = dict(zip(phase_labels, shoulder_phase_binned))
     
-    # Plot the averaged WTC and phase angles across windows
-    plot_phase_binned(head_phase_binned, shoulder_phase_binned, phase_labels)
-    plot_average_wtc_phase(avg_wtc_info, avg_phase_info, WINDOW_SIZE_SECONDS, WINDOW_OVERLAP_SECONDS)
+    # Plot the windowed average WTC and phase angles
 
 if __name__ == "__main__":
     main()
