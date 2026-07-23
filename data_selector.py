@@ -3,7 +3,7 @@ import json
 
 '''
 
-General functions to retrieve the video name and .mat file given the dyad number from the JSON file video dictionary
+General functions to retrieve the video name and .mat file given the dyad number from the JSON keypoint-video file pairs
 
 '''
 
