@@ -57,14 +57,14 @@ def calculate_average_joint_movement(joint_data: dict[np.ndarray], selected_join
     return average_joint_movement
 
 def plot_average_metric(avg_qt_windows: dict[str, np.ndarray], window_size_seconds: float, overlap_seconds: float, joint_name: str, joint_pairs: list[str], save_name: str):
-    # add legend for head and shoulder joints
     num_windows = avg_qt_windows[joint_name].shape[0]
     time_axis = np.arange(num_windows) * (window_size_seconds - overlap_seconds)
     coherence_axis = np.arange(0, 1, 0.1)
     phase_axis = np.arange(0, 360, 45)
+    label = f"{joint_pairs[0]}, {joint_pairs[1]}"
     
     fig, ax = plt.subplots(4, 1, figsize=(12, 12))
-    plt.suptitle(f'Windowed Average Wavelet Transform Coherence (WTC) of {joint_name} Keypoint in Dyad #25')
+    fig.suptitle(f'Windowed Average Wavelet Transform Coherence (WTC) of {label} in Dyad #25')
     
     for ax_idx, ax in enumerate(ax):
         ax.plot(time_axis, avg_qt_windows[joint_pairs[ax_idx]], color='blue', alpha=0.9)
@@ -82,14 +82,17 @@ def plot_phase_binned(head_phase_binned: list[np.ndarray], shoulder_phase_binned
     x = np.arange(len(phase_labels))
     width = 0.35
     
-    plt.figure(figsize=(10, 6))
-    plt.bar(x - width/2, head_phase_binned, width, label='Head')
-    plt.bar(x + width/2, shoulder_phase_binned, width, label='Shoulders')
-    plt.xticks(x, phase_labels)
-    plt.xlabel('Phase Relationship')
-    plt.ylabel('Counts')
-    plt.title('Phase Relationship Count for Head and Shoulders')
-    plt.legend(loc='upper right')
+    fig, axes = plt.subplots(2, 2, figsize=(10, 6))
+    for ax, shoulder_pair in zip(axes, shoulder_phase_binned):
+        ax.bar(x - width/2, head_phase_binned, width, label='Head')
+        ax.bar(x + width/2, shoulder_phase_binned[shoulder_pair], width, label=shoulder_pair)
+        ax.xticks(x, phase_labels)
+        ax.set_xlabel('Phase Relationship')
+        ax.set_ylabel('Counts')
+        ax.legend(loc='upper right')
+        
+    fig.suptitle('Phase Relationship Count for Head and Shoulder Joints')
+    plt.show()
     # plt.savefig("phase_binned_counts_2.png")
 
 def main():
@@ -175,7 +178,7 @@ def main():
     # Bin phase values to determine dominant phase relationship within each window
     phase_labels = ["In-Phase", "Parent-Lead", "Anti-Phase", "Infant-Lead"]
     head_phase_binned = []
-    shoulder_phase_binned = []
+    shoulder_phase_binned = {}
     
     head_in_phase = np.sum((head_phase_dg <= 45) | (head_phase_dg > 315))
     head_parent_lead = np.sum((head_phase_dg > 45) & (head_phase_dg <= 135))
@@ -187,6 +190,11 @@ def main():
     all_shoulder_parent_lead =[np.sum((shoulder_phase_dg > 45) & (shoulder_phase_dg <= 315)) for shoulder_phase_dg in all_shoulder_phase_dg]
     all_shoulder_anti_phase = [np.sum((shoulder_phase_dg > 135) & (shoulder_phase_dg <= 225)) for shoulder_phase_dg in all_shoulder_phase_dg]
     all_shoulder_infant_lead = [np.sum((shoulder_phase_dg > 225) & (shoulder_phase_dg <= 315)) for shoulder_phase_dg in all_shoulder_phase_dg]
+    
+    for joint_pair in SHOULDER_JOINT_PAIRS:
+        label = f"{joint_pair[0]}, {joint_pair[1]}"
+        for in_phase, parent_lead, anti_phase, infant_lead in zip(all_shoulder_in_phase, all_shoulder_parent_lead, all_shoulder_anti_phase, all_shoulder_infant_lead):
+            shoulder_phase_binned[label] = [in_phase, parent_lead, anti_phase, infant_lead]
     
     # shoulder_in_phase = np.sum((shoulder_phase_dg <= 45) | (shoulder_phase_dg > 315))
     # shoulder_parent_lead = np.sum((shoulder_phase_dg > 45) & (shoulder_phase_dg < 135))
