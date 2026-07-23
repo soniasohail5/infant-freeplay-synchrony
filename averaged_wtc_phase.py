@@ -42,23 +42,23 @@ JOINT_MOVEMENT_PATH = "/mnt/c/3HYPER FREEPLAY DV METRABs/MATLAB Keypoints 2/2D K
 SHOULDER_JOINT_PAIRS = list(product(SELECTED_JOINT_NAMES[1:3], repeat=2))
 ELBOW_JOINT_PAIRS = list(product(SELECTED_JOINT_NAMES[3:], repeat=2))
 
-def convert_seconds_to_frame(seconds, frame_rate):
+def convert_seconds_to_frame(seconds: int, frame_rate: float):
     return int(seconds * frame_rate)
 
-def make_sliding_windows(data, window_size_frames, overlap):
+def make_sliding_windows(data: np.ndarray, window_size_frames: int, overlap: int):
     step = window_size_frames - overlap
     num_windows = (data.shape[0] - window_size_frames) // step + 1
     windows = sliding_window_view(data, window_shape=window_size_frames)[::step]
     return windows[:num_windows]
 
-def calculate_average_joint_movement(joint_data, selected_joint_names):
+def calculate_average_joint_movement(joint_data: dict[np.ndarray], selected_joint_names: list):
     selected_joint_data = np.array([joint_data[name] for name in selected_joint_names])
     average_joint_movement = np.mean(selected_joint_data, axis=0)
     return average_joint_movement
 
-def plot_average_wtc(avg_wtc_windows: dict[str, np.ndarray], window_size_seconds: float, overlap_seconds: float, joint_name: str, joint_pairs: list[str], save_name: str):
+def plot_average_metric(avg_qt_windows: dict[str, np.ndarray], window_size_seconds: float, overlap_seconds: float, joint_name: str, joint_pairs: list[str], save_name: str):
     # add legend for head and shoulder joints
-    num_windows = avg_wtc_windows[joint_name].shape[0]
+    num_windows = avg_qt_windows[joint_name].shape[0]
     time_axis = np.arange(num_windows) * (window_size_seconds - overlap_seconds)
     coherence_axis = np.arange(0, 1, 0.1)
     phase_axis = np.arange(0, 360, 45)
@@ -67,7 +67,7 @@ def plot_average_wtc(avg_wtc_windows: dict[str, np.ndarray], window_size_seconds
     plt.suptitle(f'Windowed Average Wavelet Transform Coherence (WTC) of {joint_name} Keypoint in Dyad #25')
     
     for ax_idx, ax in enumerate(ax):
-        ax.plot(time_axis, avg_wtc_windows[joint_pairs[ax_idx]], color='blue', alpha=0.9)
+        ax.plot(time_axis, avg_qt_windows[joint_pairs[ax_idx]], color='blue', alpha=0.9)
         ax.set_title(f'{joint_pairs[ax_idx]} WTC')
         ax.set_xlabel('Time (s)')
         ax.set_ylabel('Coherence')
@@ -78,7 +78,7 @@ def plot_average_wtc(avg_wtc_windows: dict[str, np.ndarray], window_size_seconds
     plt.show()
     # plt.savefig(save_name)
     
-def plot_phase_binned(head_phase_binned, shoulder_phase_binned, phase_labels):
+def plot_phase_binned(head_phase_binned: list[np.ndarray], shoulder_phase_binned: dict[np.ndarray], phase_labels: list[np.str_]):
     x = np.arange(len(phase_labels))
     width = 0.35
     
@@ -130,6 +130,10 @@ def main():
     foi_indices = np.where((head_freqs >= FREQ_LOW) & (head_freqs <= FREQ_HIGH))[0]
     head_wtc_foi = head_wtc_signal[foi_indices, :]
     head_phase_foi = head_phase_signal[foi_indices, :]
+    
+    all_shoulder_wtc_foi = [wtc[foi_indices, :] for wtc in all_shoulder_wtc_signals]
+    all_shoulder_phase_foi = [phase[foi_indices, :] for phase in all_shoulder_phase_signals]
+        
     # shoulder_wtc_foi = shoulder_wtc_signal[foi_indices, :]
     # shoulder_phase_foi = shoulder_phase_signal[foi_indices, :]    
     
@@ -139,15 +143,21 @@ def main():
     # avg_shoulder_wtc_foi = np.mean(shoulder_wtc_foi, axis=0)
     # avg_shoulder_phase_foi = circmean(shoulder_phase_foi, axis=0)
     
+    all_avg_shoulder_wtc_foi = [np.mean(wtc_foi, axis=0) for wtc_foi in all_shoulder_wtc_foi]
+    all_avg_shoulder_phase_foi = [circmean(phase_foi, axis=0) for phase_foi in all_shoulder_phase_foi] 
+    
     # Average the WTC and phase angles across the sliding windows
     avg_head_wtc_windowed = np.mean(make_sliding_windows(avg_head_wtc_foi, window_size_frames, overlap_frames), axis=1)
     # avg_shoulder_wtc_windowed = np.mean(make_sliding_windows(avg_shoulder_wtc_foi, window_size_frames, overlap_frames), axis=1)
     avg_head_phase_windowed = circmean(make_sliding_windows(avg_head_phase_foi, window_size_frames, overlap_frames), low=-np.pi, high=np.pi, axis=1)
     # avg_shoulder_phase_windowed = circmean(make_sliding_windows(avg_shoulder_phase_foi, window_size_frames, overlap_frames), low=-np.pi, high=np.pi, axis=1)
+    all_avg_shoulder_wtc_windowed = [np.mean(make_sliding_windows(avg_shoulder_wtc_foi, window_size_frames, overlap_frames)) for avg_shoulder_wtc_foi in all_avg_shoulder_wtc_foi]
+    all_avg_shoulder_phase_windowed = [circmean(make_sliding_windows(avg_shoulder_phase_foi, window_size_frames, overlap_frames)) for avg_shoulder_phase_foi in all_avg_shoulder_phase_foi]
     
      # Convert phase angles from radians to degrees for easier interpretation 
     head_phase_dg = np.degrees(avg_head_phase_windowed) % 360
     # shoulder_phase_dg = np.degrees(avg_shoulder_phase_windowed) % 360
+    all_shoulder_phase_dg = [(np.degrees(shoulder_phase) % 360) for shoulder_phase in all_avg_shoulder_phase_windowed]
     
     avg_wtc_info = {
         "Head": avg_head_wtc_windowed,
@@ -156,6 +166,12 @@ def main():
     avg_phase_info = {
         "Head": head_phase_dg,
     }
+    
+    for joint_pair, shoulder_wtc, shoulder_phase in zip(SHOULDER_JOINT_PAIRS, all_avg_shoulder_wtc_windowed, all_avg_shoulder_phase_windowed):
+        label = f"{joint_pair[0]}, {joint_pair[1]}"
+        avg_wtc_info[label] = shoulder_wtc
+        avg_phase_info[label] = shoulder_phase
+    
     # Bin phase values to determine dominant phase relationship within each window
     phase_labels = ["In-Phase", "Parent-Lead", "Anti-Phase", "Infant-Lead"]
     head_phase_binned = []
@@ -166,6 +182,11 @@ def main():
     head_anti_phase = np.sum((head_phase_dg > 135) & (head_phase_dg <= 225))
     head_infant_lead = np.sum((head_phase_dg > 225) & (head_phase_dg <= 315)) 
     head_phase_binned.extend([head_in_phase, head_parent_lead, head_anti_phase, head_infant_lead])
+    
+    all_shoulder_in_phase = [np.sum((shoulder_phase_dg <= 45) | (shoulder_phase_dg > 315)) for shoulder_phase_dg in all_shoulder_phase_dg]
+    all_shoulder_parent_lead =[np.sum((shoulder_phase_dg > 45) & (shoulder_phase_dg <= 315)) for shoulder_phase_dg in all_shoulder_phase_dg]
+    all_shoulder_anti_phase = [np.sum((shoulder_phase_dg > 135) & (shoulder_phase_dg <= 225)) for shoulder_phase_dg in all_shoulder_phase_dg]
+    all_shoulder_infant_lead = [np.sum((shoulder_phase_dg > 225) & (shoulder_phase_dg <= 315)) for shoulder_phase_dg in all_shoulder_phase_dg]
     
     # shoulder_in_phase = np.sum((shoulder_phase_dg <= 45) | (shoulder_phase_dg > 315))
     # shoulder_parent_lead = np.sum((shoulder_phase_dg > 45) & (shoulder_phase_dg < 135))
