@@ -2,9 +2,7 @@ import os
 import json
 
 '''
-
 General functions to retrieve the video name and .mat file given the dyad number from the JSON keypoint-video file pairs
-
 '''
 
 def get_video_file_path(dyad_number: int, folder_path: str) -> str:

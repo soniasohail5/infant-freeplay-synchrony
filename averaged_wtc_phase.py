@@ -77,23 +77,42 @@ def plot_average_metric(avg_qt_windows: dict[str, np.ndarray], window_size_secon
     plt.tight_layout()
     plt.savefig(save_name)
     
-def plot_phase_binned(head_phase_binned: list[np.ndarray], shoulder_phase_binned: dict[np.ndarray], phase_labels: list[np.str_]):
+def plot_phase_binned(head_phase_binned: list[np.int64], shoulder_phase_binned: dict[str, list[np.int64]], elbow_phase_binned: dict[str, list[np.int64]], phase_labels: list[np.str_]):
     x = np.arange(len(phase_labels))
     width = 0.35
     
-    fig, axes = plt.subplots(2, 2, figsize=(10, 6))
-    for ax, shoulder_pair in zip(axes, shoulder_phase_binned):
-        ax.bar(x - width/2, head_phase_binned, width, label='Head')
-        ax.bar(x + width/2, shoulder_phase_binned[shoulder_pair], width, label=shoulder_pair)
+    fig = plt.figure(figsize=(10, 6))
+    fig.suptitle('Phase Relationship Count for Head Movement')
+    plt.bar(x, head_phase_binned, width, label='Head')
+    plt.xlabel('Phase Relationship')
+    plt.ylabel('Counts')
+    plt.xticks(x, phase_labels)
+    
+    fig1, axes = plt.subplots(2, 2, figsize=(12, 8))
+    for ax, shoulder_pair in zip(axes.flatten(), shoulder_phase_binned):
+        ax.bar(x, shoulder_phase_binned[shoulder_pair], width, label=shoulder_pair)
+        ax.set_title(f'{shoulder_pair}')
         ax.set_xticks(x)
         ax.set_xticklabels(phase_labels)
-        ax.set_xlabel('Phase Relationship')
         ax.set_ylabel('Counts')
-        ax.legend(loc='upper right')
         
-    fig.suptitle('Phase Relationship Count for Head and Shoulder Joints')
-    plt.show()
-    # plt.savefig("phase_binned_counts_2.png")
+    fig1.suptitle('Phase Relationship Count for Shoulder Joint Movement')
+    
+    fig2, axes2 = plt.subplots(2, 2, figsize=(12, 8))
+    for ax, elbow_pair in zip(axes2.flatten(), elbow_phase_binned):
+        ax.bar(x, elbow_phase_binned[elbow_pair], width, label=elbow_pair)
+        ax.set_title(f'{elbow_pair}')
+        ax.set_xticks(x)
+        ax.set_xticklabels(phase_labels)
+        ax.set_ylabel('Counts')
+        
+    fig2.suptitle('Phase Relationship Count for Elbow Joint Movement')
+
+    fig.savefig("phase_binned_counts_head.png")
+    fig1.savefig("phase_binned_counts_shoulders.png")
+    fig2.savefig("phase_binned_counts_elbows.png")
+    
+    plt.close()
 
 def main():
     # Load movement data 
@@ -215,26 +234,27 @@ def main():
     all_elbow_parent_lead =[np.sum((elbow_phase_dg % 360 > 45) & (elbow_phase_dg % 360 <= 135)) for elbow_phase_dg in all_elbow_phase_dg]
     all_elbow_anti_phase = [np.sum((elbow_phase_dg % 360 > 135) & (elbow_phase_dg % 360 <= 225)) for elbow_phase_dg in all_elbow_phase_dg]
     all_elbow_infant_lead = [np.sum((elbow_phase_dg % 360 > 225) & (elbow_phase_dg % 360 <= 315)) for elbow_phase_dg in all_elbow_phase_dg]
-    
-'''
-for (joint_pair, in_phase, parent_lead, anti_phase, infant_lead) in zip(SHOULDER_JOINT_PAIRS, all_shoulder_in_phase, all_shoulder_parent_lead, 
-        all_shoulder_anti_phase, all_shoulder_infant_lead):
-        label = f"{joint_pair[0]}-{joint_pair[1]}"
-        shoulder_phase_binned[label] = [in_phase, parent_lead, anti_phase, infant_lead]
 
-for (joint_pair, in_phase, parent_lead, anti_phase, infant_lead) in zip(ELBOW_JOINT_PAIRS, all_elbow_in_phase, all_elbow_parent_lead,
-        all_elbow_anti_phase, all_elbow_infant_lead):
-        label = f"{joint_pair[0]}-{joint_pair[1]}"
-        elbow_phase_binned[label] = [in_phase, parent_lead, anti_phase, infant_lead]
-    
+    for (joint_pair, in_phase, parent_lead, anti_phase, infant_lead) in zip(SHOULDER_JOINT_PAIRS, all_shoulder_in_phase, all_shoulder_parent_lead, all_shoulder_anti_phase, all_shoulder_infant_lead):
+            label = f"{joint_pair[0]}-{joint_pair[1]}"
+            shoulder_phase_binned[label] = [in_phase, parent_lead, anti_phase, infant_lead]
+
+    for (joint_pair, in_phase, parent_lead, anti_phase, infant_lead) in zip(ELBOW_JOINT_PAIRS, all_elbow_in_phase, all_elbow_parent_lead, all_elbow_anti_phase, all_elbow_infant_lead):
+            label = f"{joint_pair[0]}-{joint_pair[1]}"
+            elbow_phase_binned[label] = [in_phase, parent_lead, anti_phase, infant_lead]
+            
+    print(type(shoulder_phase_binned))
+        
     # head_phase_bin_info = dict(zip(phase_labels, head_phase_binned))
     # shoulder_phase_bin_info = dict(zip(phase_labels, shoulder_phase_binned))
-'''
+
     # Plot the windowed average WTC and phase angles
-    plot_average_metric(avg_wtc_info, WINDOW_SIZE_SECONDS, WINDOW_OVERLAP_SECONDS, "Shoulders", SHOULDER_JOINT_PAIRS, "average_wt_shoulders.png", "Coherence", y_ticks=np.arange(0, 1.1, 0.1))
+    plot_average_metric(avg_wtc_info, WINDOW_SIZE_SECONDS, WINDOW_OVERLAP_SECONDS, "Shoulders", SHOULDER_JOINT_PAIRS, "average_wtc_shoulders.png", "Coherence", y_ticks=np.arange(0, 1.1, 0.1))
     plot_average_metric(avg_wtc_info, WINDOW_SIZE_SECONDS, WINDOW_OVERLAP_SECONDS, "Elbows", ELBOW_JOINT_PAIRS, "average_wtc_elbows.png", "Coherence", y_ticks=np.arange(0, 1.1, 0.1))
     plot_average_metric(avg_phase_info, WINDOW_SIZE_SECONDS, WINDOW_OVERLAP_SECONDS, "Shoulders", SHOULDER_JOINT_PAIRS, "average_phase_shoulders.png", "Phase (degrees)", y_ticks=[-180, 0, 180])
     plot_average_metric(avg_phase_info, WINDOW_SIZE_SECONDS, WINDOW_OVERLAP_SECONDS, "Elbows", ELBOW_JOINT_PAIRS, "average_phase_elbows.png", "Phase (degrees)", y_ticks=[-180, 0, 180])
+    
+    plot_phase_binned(head_phase_binned, shoulder_phase_binned, elbow_phase_binned, phase_labels)
 
 if __name__ == "__main__":
     main()
