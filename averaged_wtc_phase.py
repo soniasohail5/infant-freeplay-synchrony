@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import circmean
 from itertools import product
 from single_dyad_wtc_analysis import load_data_mat, compute_wtc
+from signal_postprocessing import find_missing_segments_indices
 from numpy.lib.stride_tricks import sliding_window_view
 
 '''

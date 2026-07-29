@@ -22,7 +22,7 @@ joint_names = np.loadtxt("/mnt/c/metrabs joint connections/joint_names_2.txt", d
 joint_edges = np.loadtxt("/mnt/c/metrabs joint connections/joint_edges.txt", dtype='int')
 
 # Helper/Select Functions
-def find_missing_segments_indices(data):
+def find_missing_segments_indices(data: np.ndarray) -> list:
     # input is assumed to be 1d (corresponding to each joint signal in one direction)
     indices = np.argwhere(np.isnan(data)).flatten()
     
