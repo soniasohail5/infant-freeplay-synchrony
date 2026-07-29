@@ -83,16 +83,16 @@ class MultiDataSyncFigure:
         for infant_joint in DESIRED_JOINT_NAMES:
             for parent_joint in DESIRED_JOINT_NAMES:
                 joint_pair  = [infant_joint, parent_joint]
-            
+
                 if infant_joint == parent_joint:
                     joint_pair_str = parent_joint 
                 else:
                     joint_pair_str = infant_joint + ", " + parent_joint
-                    
-            wtc, a_wct, coi, freq, sig  = compute_wtc(self.dyad_info, joint_pair, s0, dt)
-            wtc_data = {"WTC": wtc, "Phase Angles": a_wct, "COI": coi, 
-                         "Frequency": freq, "Significance": sig}
-            self.all_wtc_data[joint_pair_str] = wtc_data
+            
+                wtc, a_wct, coi, freq, sig  = compute_wtc(self.dyad_info, joint_pair, s0, dt)
+                wtc_data = {"WTC": wtc, "Phase Angles": a_wct, "COI": coi, 
+                            "Frequency": freq, "Significance": sig}
+                self.all_wtc_data[joint_pair_str] = wtc_data
             
     def set_axes(self):
         # places the titles, axes, and buttons for each plot 
@@ -252,7 +252,7 @@ class MultiDataSyncFigure:
             self.parent_selected_joint = joint_name[1]
         else:
             self.infant_selected_joint = joint_name
-            self.parent_selected_joint = joint_nament = joint_name
+            self.parent_selected_joint = joint_name 
         self.get_wtc()  # needed before plot_wtc can access self.all_wtc_data
         self.draw_video_bg(ax_number=0, frame_number=frame_number)
         self.plot_joints(ax_number=0, frame_number=frame_number)
@@ -300,7 +300,7 @@ class MultiDataSyncFigure:
             joint_pair = self.infant_selected_joint
         else:
             joint_pair = self.infant_selected_joint + ", " + self.parent_selected_joint
-        
+
         wtc_data = self.all_wtc_data[joint_pair]
         wtc = wtc_data["WTC"]
         freq = wtc_data["Frequency"]
@@ -417,7 +417,7 @@ def main():
     )
     
     fig_obj.set_axes()
-    fig_obj.initialize_video(joint_name=["Neck", "Neck"])
+    fig_obj.initialize_video(joint_name=["Neck", "Right Elbow"])
     plt.show()
 
 if __name__ == "__main__":

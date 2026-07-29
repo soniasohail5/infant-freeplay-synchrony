@@ -36,7 +36,7 @@ coherence and phase angle separately for each joint.
 WINDOW_SIZE_SECONDS = 10
 WINDOW_OVERLAP_SECONDS = 2
 FREQ_LOW = 0.5 # in Hz
-FREQ_HIGH = 2.0 # in Hz
+FREQ_HIGH = 1.5 # in Hz
 SELECTED_JOINT_NAMES = ['Head', 'Left Shoulder', 'Right Shoulder', 'Left Elbow', 'Right Elbow']
 JOINT_MOVEMENT_PATH = "/mnt/c/3HYPER FREEPLAY DV METRABs/MATLAB Keypoints 2/2D Keypoints Processed/3HYPER.025 FREEPLAY DV PROCESSED 2D Keypoints.mat"
 SHOULDER_JOINT_PAIRS = list(product(SELECTED_JOINT_NAMES[1:3], repeat=2))
