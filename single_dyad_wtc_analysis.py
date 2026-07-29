@@ -22,8 +22,9 @@ and concatencate the coherence and CWT values before plotting
 
 DESIRED_JOINT_INDICES = [12, 13, 14, 15, 16, 17, 18, 19]
 mother = wavelet.Morlet(8) # taken from Fujiwara paper
-keypoints_dir = "/mnt/c/3HYPER FREEPLAY DV METRABs/MATLAB Keypoints 2/2D Keypoints Processed/3HYPER.025 FREEPLAY DV PROCESSED 2D Keypoints.mat"
+keypoints_dir = "/mnt/c/3HYPER FREEPLAY DV METRABs/MATLAB Keypoints 2/2D Keypoints Processed/3HYPER.097 FREEPLAY DV PROCESSED 2D Keypoints.mat"
 DESIRED_JOINT_NAMES = ["Neck", "Left Clavicle", "Right Clavicle", "Head", "Left Shoulder", "Right Shoulder", "Left Elbow", "Right Elbow"]
+MORLET_STD = 1/np.sqrt(2) # standard deviation of the Morlet wavelet (used for computing the minimum number of frames needed for wavelet analysis)
 
 def clear_pycwt_cache(directory="/home/infantresearch/tf219/tf219/lib/python3.12/site-packages/pycwt/sample"):
     cache_files = glob.glob(os.path.join(directory, "*.npy"))
@@ -57,8 +58,35 @@ def load_data_mat(keypoints_path):
     dyad_info["Parent"] = parent_info
     
     return dyad_info
+
+def find_non_nan_segments(signal):
+# Finds the non-NaN segments of a signal and returns a list of tuples
+# Each tuple contains the start and end indices of a non-NaN segment
     
-def preprocess_signal(signal):
+    # Find where the signal goes from non-NaN to NaN
+    split_indices = np.where(np.diff(np.isnan(signal)))[0] + 1
+    
+    # Split the signal into segments based on the split indices
+    segments = np.split(signal, split_indices)
+    
+    # Filter out subarrays that contain NaN values
+    non_nan_segments = [segment for segment in segments if not np.isnan(segment).any()]
+    
+    return non_nan_segments
+
+def find_and_filter_non_nan_segments(signal, dt):
+    # Filter out non-NaN segments that are too short for wavelet analysis
+    
+    # Calculate the minimum number of frames needed for wavelet analysis based on the Morlet wavelet standard deviation and the sampling frequency
+    fs = 1/dt
+    total_frames = len(signal)
+    s_max = total_frames/(3 * MORLET_STD) # in fourier time scale
+    min_frames = (mother.f0 * fs)/s_max # in frequency domain
+    
+    filtered_segments = [segment for segment in find_non_nan_segments(signal) if len(segment) > min_frames]
+    return filtered_segments
+
+def preprocess_signal(signal: np.ndarray):
 # Detrend and normalize signal using Z-transform
 # before running wavelet analysis functions on dyad
     
@@ -212,8 +240,12 @@ def main():
         dt = 1/(max_frames/240) # assuming all videos are exactly 4 minutes long (not always true, but can be resolved in batch analyses later)
         s0 = 2 * dt
 
-        print(f"Computing WTC for {joint_name}....")
-        plot_wtc_xwt(dyad_number, dyad_info, joint_name, dt, s0)
+        # print(f"Computing WTC for {joint_name}....")
+        # plot_wtc_xwt(dyad_number, dyad_info, joint_name, dt, s0)
+        
+        infant_segments = find_non_nan_segments(infant_signal)
+        print(infant_segments)
+    
 
 if __name__ == "__main__":
     main()

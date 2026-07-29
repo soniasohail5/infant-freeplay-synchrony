@@ -117,7 +117,7 @@ dyad_ids = [20, 21, 22, 23, 24, 25, 27, 30, 32, 33, 34, 37, 38, 39, 40, 41, 42, 
 random_dyads = rand.sample(dyad_ids, 2)
 
 # Selecting sample dyads for filter testing 
-selected_dyads = [108]
+selected_dyads = [97]
 excluded_dyads = [57, 76, 78, 112]
 
 def main():
